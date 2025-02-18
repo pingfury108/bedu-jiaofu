@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json.schemastore.org/chrome-manifest.json",
+  "manifest_version": 3,
+  "version": "0.0.1",
+  "name": "bedu-jiaofu",
+  "description": "A baidu edu jiaofu tools",
+  "author": "pingfury@outlook.com",
+  "icons": {
+    "16": "icccc.png",
+    "48": "icccc.png",
+    "128": "icccc.png"
+  },
+  "permissions": [
+    "contextMenus",
+    "sidePanel",
+    "storage"
+  ],
+  "background": {
+    "chromium:service_worker": "background.js",
+    "firefox:scripts": [
+      "background.js"
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://easylearn.baidu.com/*"
+      ],
+      "js": [
+        "content/scripts.js"
+      ]
+    }
+  ],
+  "chromium:action": {
+    "default_icon": {
+      "48": "icccc.png"
+    },
+    "default_title": "打开侧边栏"
+  },
+  "chromium:side_panel": {
+    "default_path": "sidebar/index.html",
+    "default_title": "侧边栏内容"
+  }
+}
