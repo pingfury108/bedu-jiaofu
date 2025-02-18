@@ -1,4 +1,4 @@
-# edu-exp
+# bedu-jiaofu
 
 > A minimum extension template. This template includes a manifest file.
 
