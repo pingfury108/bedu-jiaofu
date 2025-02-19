@@ -164,7 +164,7 @@ export async function ocr_text(image_data, host, uname) {
       headers: {
         'accept': 'application/json',
         'Content-Type': 'application/json',
-        'X-Pfy-Key': uname
+        'Authorization': uname
       },
       body: JSON.stringify(image_data)
     });
