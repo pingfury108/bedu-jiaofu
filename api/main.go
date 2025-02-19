@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 	"github.com/urfave/cli/v2"
@@ -37,18 +39,44 @@ type OCRContext struct {
 	ImageData string
 }
 
-// 添加一个存储允许的 token 的变量
-var allowedTokens = []string{
-	"test-token-1",
-	"test-token-2",
-	// 可以添加更多允许的 token
+type Config struct {
+	Users []string `json:"users"`
+}
+
+var (
+	allowedTokens     []string
+	defaultConfigFile = "config.json"
+)
+
+func loadTokensFromFile(configFile string) error {
+	if configFile == "" {
+		// 使用当前工作目录下的默认配置文件
+		workDir, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("获取工作目录失败: %v", err)
+		}
+		configFile = filepath.Join(workDir, defaultConfigFile)
+	}
+
+	data, err := os.ReadFile(configFile)
+	if err != nil {
+		return fmt.Errorf("读取配置文件失败: %v", err)
+	}
+
+	var config Config
+	if err := json.Unmarshal(data, &config); err != nil {
+		return fmt.Errorf("解析配置文件失败: %v", err)
+	}
+
+	allowedTokens = config.Users
+	return nil
 }
 
 // 添加认证中间件函数
 func authMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("Authorization")
-		
+
 		// 检查 token 是否在允许列表中
 		authorized := false
 		for _, allowedToken := range allowedTokens {
@@ -65,7 +93,7 @@ func authMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		
+
 		c.Next()
 	}
 }
@@ -208,8 +236,19 @@ func main() {
 				Value: false,
 				Usage: "是否启用调试模式",
 			},
+			&cli.StringFlag{
+				Name:    "config",
+				Aliases: []string{"c"},
+				Value:   "config.json",
+				Usage:   "配置文件路径",
+			},
 		},
 		Action: func(c *cli.Context) error {
+			if err := loadTokensFromFile(c.String("config")); err != nil {
+				log.Printf("加载配置文件失败: %v", err)
+				return err
+			}
+
 			port := c.String("port")
 			debug := c.Bool("debug")
 			fmt.Printf("服务器正在启动，端口: %s, 调试模式: %v\n", port, debug)
