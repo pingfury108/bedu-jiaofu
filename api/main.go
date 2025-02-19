@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 
@@ -76,11 +77,22 @@ func loadTokensFromFile(configFile string) error {
 func authMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("Authorization")
+		// 对 token 进行 URL 解码
+		decodedToken, err := url.QueryUnescape(token)
+		if err != nil {
+			log.Printf("Token URL 解码失败: %v", err)
+			c.JSON(200, gin.H{
+				"text": "无效的授权令牌",
+			})
+			c.Abort()
+			return
+		}
+		log.Printf("Authorization token received: %s", decodedToken)
 
 		// 检查 token 是否在允许列表中
 		authorized := false
 		for _, allowedToken := range allowedTokens {
-			if token == allowedToken {
+			if decodedToken == allowedToken {
 				authorized = true
 				break
 			}
