@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"net/url"
@@ -15,10 +16,19 @@ import (
 
 	_ "github.com/joho/godotenv/autoload"
 
+	"embed"
+	"html/template"
+
 	"github.com/volcengine/volcengine-go-sdk/service/arkruntime"
 	"github.com/volcengine/volcengine-go-sdk/service/arkruntime/model"
 	"github.com/volcengine/volcengine-go-sdk/volcengine"
 )
+
+//go:embed templates/*
+var templateFS embed.FS
+
+//go:embed static/*
+var staticFS embed.FS
 
 const ocrPrompt = `#Role: 我是一个专门用于从图片中识别内容的专业 AI 角色
 
@@ -182,7 +192,11 @@ func setupRouter(debug bool, apiKey, apiBase, modelName string, adminKey string)
 		gin.DisableConsoleColor()
 	}
 	r := gin.Default()
-	r.LoadHTMLGlob("templates/*")
+	r.SetHTMLTemplate(template.Must(template.New("").Funcs(r.FuncMap).ParseFS(templateFS, "templates/*")))
+
+	// Serve static files from embedded FS under "/public" URL path
+	subFS, _ := fs.Sub(staticFS, "static")
+	r.StaticFS("/public", http.FS(subFS))
 
 	// 添加 CORS 中间件
 	r.Use(func(c *gin.Context) {
