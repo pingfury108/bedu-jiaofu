@@ -23,7 +23,7 @@ export default function JiaoFu({ host, uname }) {
 
     const hasError = await llm_test(host, uname);
     if (!hasError) {
-      alert('无权访问，请检查您的权限');
+      alert('无权使用bedu-jiaofu插件，请联系管理员');
       return;
     }
 

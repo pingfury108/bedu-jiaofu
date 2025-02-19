@@ -222,11 +222,11 @@ export async function llm_test(host, uname) {
     if (data.text) return false;
     if (data.error) return true;
 
-    return null; // Default return if neither exists
+    return false; // Default return if neither exists
   } catch (error) {
     console.error('Error in llm_text:', error);
-    return true; // Return true for any error case
-  }
+    return false; // Return true for any error case
+   }
 }
 
 export async function replaceLatexWithImages(text) {

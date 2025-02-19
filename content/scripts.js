@@ -1,8 +1,10 @@
-import { math2img, baidu_user_info,replaceLatexWithImages, replacePunctuation, img_upload, doc_img_upload, doc_save_page} from "../lib.js";
+import {baidu_user_info, replaceLatexWithImages, replacePunctuation, doc_img_upload, doc_save_page, llm_test } from "../lib.js";
 
 console.log('hello from content_scripts');
 
 let host; // 声明 host 变量
+
+let uname;
 
 // 从 Chrome 存储中同步读取 host 参数
 chrome.storage.sync.get(['host'], (result) => {
@@ -18,6 +20,7 @@ chrome.storage.sync.get(['host'], (result) => {
     if (response && response.data && response.data.userName) {
       // 将用户名存储到 Chrome storage
       chrome.storage.sync.set({ baidu_user_name: response.data.userName });
+      uname = response.data.userName
     }
   } catch (error) {
     console.error('Error getting baidu user info:', error);
@@ -152,6 +155,13 @@ function sendFixEvent(element) {
 }
 
 chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+  // Add LLM test check at the beginning
+  const llmAvailable = await llm_test(host, uname);
+  if (!llmAvailable) {
+    alert('无权使用bedu-jiaofu插件，请联系管理员');
+    return true; // 保持消息通道开启，但不发送响应
+  }
+
   if (request.action === "font_format") {
     const selectedElement = document.activeElement;
     if (selectedElement) {
