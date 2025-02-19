@@ -1,4 +1,4 @@
-import {baidu_user_info, replaceLatexWithImages, replacePunctuation, doc_img_upload, doc_save_page, llm_test } from "../lib.js";
+import {textbook_info, save_book_info,baidu_user_info, replaceLatexWithImages, replacePunctuation, doc_img_upload, doc_save_page, llm_test } from "../lib.js";
 
 console.log('hello from content_scripts');
 
@@ -237,6 +237,9 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     }
 
     try {
+      // Create a map to store file names and CDN URLs
+      //const fileUrlMap = new Map();
+
       for (const fileData of sortedFiles) {
         // Convert base64 to Blob
         const base64Response = await fetch(fileData.content);
@@ -249,10 +252,58 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
           throw new Error(`Upload failed for ${fileData.fileName} - no CDN URL received`);
         }
 
+        // Store the file name and CDN URL in the map
+        //fileUrlMap.set(fileData.fileName, uploadResult.data.cdnUrl);
+
         // Save page with the image URL
         await doc_save_page(textbookId, uploadResult.data.cdnUrl, textbookType);
       }
-      sendResponse({ success: true });
+
+      /*
+      // Convert the map to a sorted array of URLs based on file names
+      const sortedUrls = Array.from(fileUrlMap)
+        .sort(([a], [b]) => a.localeCompare(b)) // 改为 a.localeCompare(b) 实现升序排序
+        .map(([_, url]) => url); // 提取 URL
+
+      console.log(fileUrlMap);
+      console.log(sortedUrls);
+
+      // Get current textbook info
+      const textbookResponse = await textbook_info(textbookId);
+      const textbookData = textbookResponse.data; // Access the data field
+
+      // Update questionPageList with new sorted URLs
+      const updatedQuestionPageList = [
+        ...(textbookData.shiti?.questionPageList || []),
+        ...sortedUrls
+      ];
+
+      // Prepare data for save_book_info
+      const saveData = {
+        textbookID: Number(textbookId),
+        directoryPageList: textbookData.directory?.directoryPageList || null,
+        cipPageList: textbookData.base?.cipPageList || [],
+        coverPageList: textbookData.base?.coverPageList || [],
+        questionPageList: updatedQuestionPageList,
+        answerPageList: textbookData.shiti?.answerPageList || null,
+        year: textbookData.year,
+        bookFormat: textbookData.bookFormat,
+        bookVersionName: textbookData.bookVersionName,
+        grade: textbookData.grade,
+        isbn: textbookData.isbn,
+        publisherName: textbookData.publisherName,
+        subject: textbookData.subject,
+        title: textbookData.title,
+        volume: textbookData.volume,
+        volumeName: textbookData.volumeName
+      };
+
+      // Save updated textbook info
+      await save_book_info(saveData);
+
+        */
+
+        sendResponse({ success: true });
       // Refresh the page after all files are processed
       window.location.reload();
     } catch (error) {

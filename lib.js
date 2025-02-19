@@ -118,6 +118,48 @@ export async function baidu_user_info() {
   }
 }
 
+export async function textbook_info(id) {
+  const url = `/edushop/textbook/detail/basicinfo?textbookID=${id}`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET'
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error textbook info:', error);
+    throw error;
+  }
+}
+
+export async function save_book_info(body_data) {
+  const url = "/edushop/textbook/myproducecommit/saveinfo";
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body_data)
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error saving book info:', error);
+    throw error;
+  }
+}
+
 export function replacePunctuation(text) {
   const punctuationMap = {
     '\\.$': '。',
