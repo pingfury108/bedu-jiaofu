@@ -37,6 +37,39 @@ type OCRContext struct {
 	ImageData string
 }
 
+// 添加一个存储允许的 token 的变量
+var allowedTokens = []string{
+	"test-token-1",
+	"test-token-2",
+	// 可以添加更多允许的 token
+}
+
+// 添加认证中间件函数
+func authMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		token := c.GetHeader("Authorization")
+		
+		// 检查 token 是否在允许列表中
+		authorized := false
+		for _, allowedToken := range allowedTokens {
+			if token == allowedToken {
+				authorized = true
+				break
+			}
+		}
+
+		if !authorized {
+			c.JSON(200, gin.H{
+				"text": "无权访问",
+			})
+			c.Abort()
+			return
+		}
+		
+		c.Next()
+	}
+}
+
 func arkOCR(ctx OCRContext) (string, error) {
 	apiKey := os.Getenv("ARK_API_KEY")
 	if apiKey == "" {
@@ -117,34 +150,39 @@ func setupRouter(debug bool) *gin.Engine {
 		c.Next()
 	})
 
-	r.POST("/llm/ocr", func(c *gin.Context) {
-		var request struct {
-			ImageData string `json:"image_data" binding:"required"`
-		}
+	// 在 /llm 路由组中使用认证中间件
+	llmGroup := r.Group("/llm")
+	llmGroup.Use(authMiddleware())
+	{
+		llmGroup.POST("/ocr", func(c *gin.Context) {
+			var request struct {
+				ImageData string `json:"image_data" binding:"required"`
+			}
 
-		if err := c.ShouldBindJSON(&request); err != nil {
-			c.JSON(400, gin.H{
-				"error": "Invalid request: " + err.Error(),
+			if err := c.ShouldBindJSON(&request); err != nil {
+				c.JSON(400, gin.H{
+					"error": "Invalid request: " + err.Error(),
+				})
+				return
+			}
+
+			result, err := arkOCR(OCRContext{
+				ImageData: request.ImageData,
 			})
-			return
-		}
 
-		result, err := arkOCR(OCRContext{
-			ImageData: request.ImageData,
-		})
+			if err != nil {
+				log.Printf("OCR error: %v", err)
+				c.JSON(500, gin.H{
+					"error": "Internal server error occurred during OCR processing",
+				})
+				return
+			}
 
-		if err != nil {
-			log.Printf("OCR error: %v", err)
-			c.JSON(500, gin.H{
-				"error": "Internal server error occurred during OCR processing",
+			c.JSON(200, gin.H{
+				"text": result,
 			})
-			return
-		}
-
-		c.JSON(200, gin.H{
-			"text": result,
 		})
-	})
+	}
 
 	return r
 }
