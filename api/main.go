@@ -164,7 +164,19 @@ func arkOCR(ctx OCRContext, apiKey, apiBase, modelName string) (string, error) {
 	return *chatCompletion.Choices[0].Message.Content.StringValue, nil
 }
 
-func setupRouter(debug bool, apiKey, apiBase, modelName string) *gin.Engine {
+func adminAuthMiddleware(adminKey string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		cookieKey, err := c.Cookie("admin_key")
+		if err != nil || cookieKey != adminKey {
+			c.Redirect(http.StatusFound, "/auth")
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+func setupRouter(debug bool, apiKey, apiBase, modelName string, adminKey string) *gin.Engine {
 	if !debug {
 		gin.SetMode(gin.ReleaseMode)
 		gin.DisableConsoleColor()
@@ -223,13 +235,13 @@ func setupRouter(debug bool, apiKey, apiBase, modelName string) *gin.Engine {
 	}
 
 	// Serve users.html at the root path
-	r.GET("/", func(c *gin.Context) {
+	r.GET("/", adminAuthMiddleware(adminKey), func(c *gin.Context) {
 		c.HTML(http.StatusOK, "users.html", gin.H{"users": allowedTokens})
 	})
 
 	// Add user management endpoints
 	userGroup := r.Group("/users")
-	userGroup.Use()
+	userGroup.Use(adminAuthMiddleware(adminKey))
 	{
 		userGroup.POST("/add", func(c *gin.Context) {
 			var request struct {
@@ -313,11 +325,28 @@ func setupRouter(debug bool, apiKey, apiBase, modelName string) *gin.Engine {
 		})
 	}
 
+	// Add auth endpoints
+	r.GET("/auth", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "login.html", nil)
+	})
+
+	r.POST("/auth", func(c *gin.Context) {
+		key := c.PostForm("authKey")
+		if key == adminKey {
+			c.SetCookie("admin_key", key, 3600, "/", "", false, true)
+			c.Redirect(http.StatusFound, "/")
+		} else {
+			c.HTML(http.StatusOK, "login.html", gin.H{
+				"error": "Invalid admin key",
+			})
+		}
+	})
+
 	return r
 }
 
-func startServer(port string, debug bool, apiKey, apiBase, modelName string) error {
-	router := setupRouter(debug, apiKey, apiBase, modelName)
+func startServer(port string, debug bool, apiKey, apiBase, modelName string, adminKey string) error {
+	router := setupRouter(debug, apiKey, apiBase, modelName, adminKey)
 	return router.Run(":" + port)
 }
 
@@ -364,6 +393,13 @@ func main() {
 				Usage:   "Ark Model Name",
 				EnvVars: []string{"ARK_MODEL"},
 			},
+			&cli.StringFlag{
+				Name:    "admin-key",
+				Aliases: []string{"a"},
+				Value:   "",
+				Usage:   "Admin key for user management",
+				EnvVars: []string{"ADMIN_KEY"},
+			},
 		},
 		Action: func(c *cli.Context) error {
 			if err := loadTokensFromFile(c.String("config")); err != nil {
@@ -376,9 +412,10 @@ func main() {
 			apiKey := c.String("api-key")
 			apiBase := c.String("api-base")
 			modelName := c.String("model")
+			adminKey := c.String("admin-key")
 
 			fmt.Printf("服务器正在启动，端口: %s, 调试模式: %v\n", port, debug)
-			return startServer(port, debug, apiKey, apiBase, modelName)
+			return startServer(port, debug, apiKey, apiBase, modelName, adminKey)
 		},
 	}
 
