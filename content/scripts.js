@@ -1,4 +1,4 @@
-import { math2img, replaceLatexWithImages, replacePunctuation, img_upload, doc_img_upload, doc_save_page} from "../lib.js";
+import { math2img, baidu_user_info,replaceLatexWithImages, replacePunctuation, img_upload, doc_img_upload, doc_save_page} from "../lib.js";
 
 console.log('hello from content_scripts');
 
@@ -9,6 +9,20 @@ chrome.storage.sync.get(['host'], (result) => {
   host = result.host; // 获取 host 值
 });
 
+// 立即执行函数，不依赖 DOMContentLoaded
+(async () => {
+  try {
+    console.log('Starting to fetch baidu user info...'); // 添加调试日志
+    const response = await baidu_user_info();
+    console.log('Baidu user info response:', response);
+    if (response && response.data && response.data.userName) {
+      // 将用户名存储到 Chrome storage
+      chrome.storage.sync.set({ baidu_user_name: response.data.userName });
+    }
+  } catch (error) {
+    console.error('Error getting baidu user info:', error);
+  }
+})();
 
 async function cleanPTags(html) {
   const temp = document.createElement('div');

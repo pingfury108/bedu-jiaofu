@@ -99,6 +99,24 @@ export async function doc_save_page(btextbookID, img_url, pageType) {
 }
 
 
+export async function baidu_user_info() {
+  const url = "/edushop/user/common/info";
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET'
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error getting user info:', error);
+    throw error;
+  }
+}
 
 export function replacePunctuation(text) {
   const punctuationMap = {

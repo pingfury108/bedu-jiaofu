@@ -29,13 +29,13 @@ export default function Main() {
 
   const handleNameChange = (e) => {
     setName(e.target.value);
-    chrome.storage.sync.set({ name: e.target.value });
+    chrome.storage.sync.set({ baidu_user_name: e.target.value });
   };
 
   useEffect(() => {
-    chrome.storage.sync.get(['name'], (result) => {
-      if (result.name) {
-        setName(result.name);
+    chrome.storage.sync.get(['baidu_user_name'], (result) => {
+      if (result.baidu_user_name) {
+        setName(result.baidu_user_name);
       }
     });
   }, []);

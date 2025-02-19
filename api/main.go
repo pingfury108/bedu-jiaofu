@@ -98,27 +98,23 @@ func authMiddleware() gin.HandlerFunc {
 	}
 }
 
-func arkOCR(ctx OCRContext) (string, error) {
-	apiKey := os.Getenv("ARK_API_KEY")
+func arkOCR(ctx OCRContext, apiKey, apiBase, modelName string) (string, error) {
 	if apiKey == "" {
-		return "", fmt.Errorf("ARK_API_KEY not set")
+		return "", fmt.Errorf("API key is required")
 	}
 
-	apiBase := os.Getenv("ARK_API_BASE")
 	if apiBase == "" {
 		apiBase = "https://ark.cn-beijing.volces.com/api/v3/"
 	}
 
-	model_name := os.Getenv("ARK_MODEL")
-	if model_name == "" {
-		return "", fmt.Errorf("ARK_MODEL not set")
+	if modelName == "" {
+		return "", fmt.Errorf("Model name is required")
 	}
 
-	client := arkruntime.NewClientWithApiKey(
-		os.Getenv("ARK_API_KEY"))
+	client := arkruntime.NewClientWithApiKey(apiKey)
 
 	req := model.ChatCompletionRequest{
-		Model: model_name,
+		Model: modelName,
 		Messages: []*model.ChatCompletionMessage{
 			{
 				Role: model.ChatMessageRoleSystem,
@@ -155,7 +151,7 @@ func arkOCR(ctx OCRContext) (string, error) {
 	return *chatCompletion.Choices[0].Message.Content.StringValue, nil
 }
 
-func setupRouter(debug bool) *gin.Engine {
+func setupRouter(debug bool, apiKey, apiBase, modelName string) *gin.Engine {
 	if !debug {
 		gin.SetMode(gin.ReleaseMode)
 		gin.DisableConsoleColor()
@@ -196,7 +192,7 @@ func setupRouter(debug bool) *gin.Engine {
 
 			result, err := arkOCR(OCRContext{
 				ImageData: request.ImageData,
-			})
+			}, apiKey, apiBase, modelName)
 
 			if err != nil {
 				log.Printf("OCR error: %v", err)
@@ -215,8 +211,8 @@ func setupRouter(debug bool) *gin.Engine {
 	return r
 }
 
-func startServer(port string, debug bool) error {
-	router := setupRouter(debug)
+func startServer(port string, debug bool, apiKey, apiBase, modelName string) error {
+	router := setupRouter(debug, apiKey, apiBase, modelName)
 	return router.Run(":" + port)
 }
 
@@ -242,6 +238,27 @@ func main() {
 				Value:   "config.json",
 				Usage:   "配置文件路径",
 			},
+			&cli.StringFlag{
+				Name:    "api-key",
+				Aliases: []string{"k"},
+				Value:   "",
+				Usage:   "Ark API Key",
+				EnvVars: []string{"ARK_API_KEY"},
+			},
+			&cli.StringFlag{
+				Name:    "api-base",
+				Aliases: []string{"b"},
+				Value:   "https://ark.cn-beijing.volces.com/api/v3/",
+				Usage:   "Ark API Base URL",
+				EnvVars: []string{"ARK_API_BASE"},
+			},
+			&cli.StringFlag{
+				Name:    "model",
+				Aliases: []string{"m"},
+				Value:   "",
+				Usage:   "Ark Model Name",
+				EnvVars: []string{"ARK_MODEL"},
+			},
 		},
 		Action: func(c *cli.Context) error {
 			if err := loadTokensFromFile(c.String("config")); err != nil {
@@ -251,8 +268,12 @@ func main() {
 
 			port := c.String("port")
 			debug := c.Bool("debug")
+			apiKey := c.String("api-key")
+			apiBase := c.String("api-base")
+			modelName := c.String("model")
+
 			fmt.Printf("服务器正在启动，端口: %s, 调试模式: %v\n", port, debug)
-			return startServer(port, debug)
+			return startServer(port, debug, apiKey, apiBase, modelName)
 		},
 	}
 
