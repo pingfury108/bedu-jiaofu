@@ -98,3 +98,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 });
+
+
+// 监听快捷键命令
+chrome.commands.onCommand.addListener((command) => {
+
+  switch(command) {
+  case 'format-math':
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+      chrome.tabs.sendMessage(tabs[0].id, {
+        action: "format_math"
+      });
+    });
+    break;
+  }
+});

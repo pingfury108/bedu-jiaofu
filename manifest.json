@@ -13,7 +13,8 @@
   "permissions": [
     "contextMenus",
     "sidePanel",
-    "storage"
+    "storage",
+    "commands"
   ],
   "background": {
     "chromium:service_worker": "background.js",
@@ -40,5 +41,14 @@
   "chromium:side_panel": {
     "default_path": "sidebar/index.html",
     "default_title": "侧边栏内容"
+  },
+  "commands": {
+    "format-math": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+F",
+        "mac": "Command+Shift+F"
+      },
+      "description": "数学公式渲染"
+    }
   }
 }
