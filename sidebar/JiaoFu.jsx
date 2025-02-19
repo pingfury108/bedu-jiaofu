@@ -60,9 +60,6 @@ export default function JiaoFu({ host, uname }) {
   return (
     <div className="container max-auto px-1">
       <div className="form-control w-full max-w-xs">
-        <label className="label">
-          <span className="label-text">选择图片</span>
-        </label>
         <input
           ref={fileInputRef}
           type="file"
