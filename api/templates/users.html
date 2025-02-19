@@ -11,9 +11,32 @@
         <h1>User List</h1>
         <ul id="userList" class="list-group">
             {{ range .users }}
-            <li class="list-group-item">{{ . }}</li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                {{ . }}
+                <button class="btn btn-danger btn-sm" onclick="removeUser('{{ . }}')">Delete</button>
+            </li>
             {{ end }}
         </ul>
     </div>
+    <script>
+        function removeUser(username) {
+            if (confirm('Are you sure you want to delete ' + username + '?')) {
+                fetch('/users/remove', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ uname: username })
+                })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        alert('Failed to delete user');
+                    }
+                });
+            }
+        }
+    </script>
 </body>
 </html> 

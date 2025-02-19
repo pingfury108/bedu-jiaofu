@@ -224,8 +224,94 @@ func setupRouter(debug bool, apiKey, apiBase, modelName string) *gin.Engine {
 
 	// Serve users.html at the root path
 	r.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "users.html", gin.H{"users": allowedTokens,})
+		c.HTML(http.StatusOK, "users.html", gin.H{"users": allowedTokens})
 	})
+
+	// Add user management endpoints
+	userGroup := r.Group("/users")
+	userGroup.Use()
+	{
+		userGroup.POST("/add", func(c *gin.Context) {
+			var request struct {
+				Uname string `json:"uname" binding:"required"`
+			}
+
+			if err := c.ShouldBindJSON(&request); err != nil {
+				c.JSON(400, gin.H{"error": "Invalid request: " + err.Error()})
+				return
+			}
+
+			// Check if user already exists
+			for _, user := range allowedTokens {
+				if user == request.Uname {
+					c.JSON(400, gin.H{"error": "User already exists"})
+					return
+				}
+			}
+
+			// Add new user
+			allowedTokens = append(allowedTokens, request.Uname)
+
+			// Save to config file
+			config := Config{Users: allowedTokens}
+			data, err := json.Marshal(config)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Failed to marshal config"})
+				return
+			}
+
+			if err := os.WriteFile(defaultConfigFile, data, 0644); err != nil {
+				c.JSON(500, gin.H{"error": "Failed to save config"})
+				return
+			}
+
+			c.JSON(200, gin.H{"message": "User added successfully"})
+		})
+
+		userGroup.POST("/remove", func(c *gin.Context) {
+			var request struct {
+				Uname string `json:"uname" binding:"required"`
+			}
+
+			if err := c.ShouldBindJSON(&request); err != nil {
+				c.JSON(400, gin.H{"error": "Invalid request: " + err.Error()})
+				return
+			}
+
+			// Find and remove user
+			newUsers := []string{}
+			removed := false
+			for _, user := range allowedTokens {
+				if user != request.Uname {
+					newUsers = append(newUsers, user)
+				} else {
+					removed = true
+				}
+			}
+
+			if !removed {
+				c.JSON(400, gin.H{"error": "User not found"})
+				return
+			}
+
+			allowedTokens = newUsers
+
+			// Save to config file
+			config := Config{Users: allowedTokens}
+			data, err := json.Marshal(config)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Failed to marshal config"})
+				return
+			}
+
+			if err := os.WriteFile(defaultConfigFile, data, 0644); err != nil {
+				c.JSON(500, gin.H{"error": "Failed to save config"})
+				return
+			}
+
+			c.JSON(200, gin.H{"message": "User removed successfully"})
+		})
+	}
 
 	return r
 }
