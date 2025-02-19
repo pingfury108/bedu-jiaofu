@@ -246,6 +246,11 @@ func setupRouter(debug bool, apiKey, apiBase, modelName string, adminKey string)
 				"text": result,
 			})
 		})
+
+		// 新增测试路由
+		llmGroup.GET("/test", func(c *gin.Context) {
+			c.JSON(200, gin.H{"error": "ok"})
+		})
 	}
 
 	// Serve users.html at the root path

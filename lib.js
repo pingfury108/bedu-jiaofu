@@ -199,6 +199,36 @@ export async function ocr_text(image_data, host, uname) {
   }
 }
 
+
+export async function llm_test(host, uname) {
+  try {
+    const response = await fetch(`${host}/llm/test`, {
+      method: 'GET',  // Changed to GET method
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': encodeURIComponent(uname)
+      }
+      // Removed body since GET requests don't have a body
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Return false if text exists, true if error exists
+    if (data.text) return false;
+    if (data.error) return true;
+
+    return null; // Default return if neither exists
+  } catch (error) {
+    console.error('Error in llm_text:', error);
+    return true; // Return true for any error case
+  }
+}
+
 export async function replaceLatexWithImages(text) {
   // Convert \( and \) to $
   text = text.replace(/\\\(/g, '$').replace(/\\\)/g, '$');

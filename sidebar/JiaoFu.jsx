@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
+import { llm_test } from '../lib.js'
 
-export default function JiaoFu() {
+export default function JiaoFu({ host, uname }) {
   const [selectedFiles, setSelectedFiles] = useState([])
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef(null)
@@ -19,6 +20,12 @@ export default function JiaoFu() {
 
   const handleUpload = async () => {
     if (selectedFiles.length === 0) return;
+
+    const hasError = await llm_test(host, uname);
+    if (!hasError) {
+      alert('无权访问，请检查您的权限');
+      return;
+    }
 
     setIsUploading(true);
     try {

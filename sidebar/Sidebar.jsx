@@ -78,7 +78,7 @@ export default function Main() {
             )}
             {activeTab === 'upload' && (
                 <div className="w-full mt-2">
-                  <JiaoFu />
+                  <JiaoFu host={host} uname={name}/>
                 </div>
             )}
           </div>)
