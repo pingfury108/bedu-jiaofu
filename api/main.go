@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -169,6 +170,7 @@ func setupRouter(debug bool, apiKey, apiBase, modelName string) *gin.Engine {
 		gin.DisableConsoleColor()
 	}
 	r := gin.Default()
+	r.LoadHTMLGlob("templates/*")
 
 	// 添加 CORS 中间件
 	r.Use(func(c *gin.Context) {
@@ -219,6 +221,11 @@ func setupRouter(debug bool, apiKey, apiBase, modelName string) *gin.Engine {
 			})
 		})
 	}
+
+	// Serve users.html at the root path
+	r.GET("/", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "users.html", gin.H{"users": allowedTokens,})
+	})
 
 	return r
 }
