@@ -273,7 +273,8 @@ export async function llm_test(host, uname) {
 
 export async function replaceLatexWithImages(text) {
   // Convert \( and \) to $
-  text = text.replace(/\\\(/g, '$').replace(/\\\)/g, '$');
+  text = text.replace(/\\\(/g, '$').replace(/\\\)/g, '$')
+    .replace(/\\\[/g, '$').replace(/\\\]/g, '$');
 
   const regex = /\$([^$]+)\$/g;
   let result = text;
