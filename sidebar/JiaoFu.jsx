@@ -51,6 +51,12 @@ export default function JiaoFu({ host, uname }) {
           reader.readAsDataURL(file);
         });
 
+        // 更新上传状态
+        setUploadStatus(prev => ({
+          ...prev,
+          [file.name]: '上传中...'
+        }));
+
         try {
           // 发送单个文件并等待处理完成
           const response = await chrome.runtime.sendMessage({
@@ -59,6 +65,9 @@ export default function JiaoFu({ host, uname }) {
             currentIndex: i,
             total: selectedFiles.length
           });
+          
+          // Add 1 second delay after each upload
+          await new Promise(resolve => setTimeout(resolve, 2000));
           
           // Update upload status for this file
           setUploadStatus(prev => ({
@@ -80,6 +89,15 @@ export default function JiaoFu({ host, uname }) {
           throw new Error(`文件 ${file.name} 上传失败`);
         }
       }
+
+      // 所有文件上传完成后，发送页面刷新信号到background.js
+      if (results.length > 0) {
+        // 发送消息到background.js
+        chrome.runtime.sendMessage({ 
+          type: 'SEND_REFRESH_SIGNAL'
+        });
+      }
+
     } catch (error) {
       console.error('Upload process failed:', error);
       alert('上传失败，请重试');

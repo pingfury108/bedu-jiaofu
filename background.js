@@ -69,7 +69,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'UPLOAD_IMAGES') {
     // Get the active tab
@@ -99,6 +98,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // 处理刷新信号
+  if (message.type === 'SEND_REFRESH_SIGNAL') {
+    // 获取当前活动标签页并发送刷新消息
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]) {
+        chrome.tabs.sendMessage(tabs[0].id, { type: 'REFRESH_PAGE' });
+      }
+    });
+    return true;
+  }
+
+  if (message.type === 'CHECK_LLM_AVAILABILITY') {
+    llm_test(message.host, message.uname)
+      .then(result => {
+        sendResponse(result);
+      })
+      .catch(error => {
+        console.error('LLM test failed:', error);
+        sendResponse(false);
+      });
+    return true; // 保持消息通道开启
+  }
+});
 
 // 监听快捷键命令
 chrome.commands.onCommand.addListener((command) => {
@@ -111,19 +134,5 @@ chrome.commands.onCommand.addListener((command) => {
       });
     });
     break;
-  }
-});
-
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'CHECK_LLM_AVAILABILITY') {
-    llm_test(message.host, message.uname)
-      .then(result => {
-        sendResponse(result);
-      })
-      .catch(error => {
-        console.error('LLM test failed:', error);
-        sendResponse(false);
-      });
-    return true; // 保持消息通道开启
   }
 });

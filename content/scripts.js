@@ -155,6 +155,13 @@ function sendFixEvent(element) {
 }
 
 chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+  // 处理页面刷新信号
+  if (request.type === 'REFRESH_PAGE') {
+    // 刷新页面内容
+    window.location.reload();
+    return;
+  }
+
   // 修改为通过 background.js 执行 llm_test
   const llmAvailable = await chrome.runtime.sendMessage({ 
     type: 'CHECK_LLM_AVAILABILITY', 
