@@ -34,9 +34,12 @@ export default function JiaoFu({ host, uname }) {
     try {
       const results = [];
       
+      // 创建文件列表的副本并按文件名倒序排序
+      const sortedFiles = [...selectedFiles].sort((a, b) => b.name.localeCompare(a.name));
+      
       // 串行处理每个文件
-      for (let i = 0; i < selectedFiles.length; i++) {
-        const file = selectedFiles[i];
+      for (let i = 0; i < sortedFiles.length; i++) {
+        const file = sortedFiles[i];
         
         // 转换单个文件为 base64
         const fileData = await new Promise((resolve) => {
@@ -63,7 +66,7 @@ export default function JiaoFu({ host, uname }) {
             type: 'UPLOAD_IMAGES',
             files: [fileData],
             currentIndex: i,
-            total: selectedFiles.length
+            total: sortedFiles.length
           });
           
           // Add 1 second delay after each upload
@@ -82,7 +85,7 @@ export default function JiaoFu({ host, uname }) {
           });
           
           // 可以在这里添加进度更新的逻辑
-          console.log(`处理进度: ${i + 1}/${selectedFiles.length}`);
+          console.log(`处理进度: ${i + 1}/${sortedFiles.length}`);
           
         } catch (error) {
           console.error(`处理文件 ${file.name} 时发生错误:`, error);
