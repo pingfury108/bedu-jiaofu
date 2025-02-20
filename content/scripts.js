@@ -228,95 +228,63 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   }
 
   if (request.type === 'CONTENT_UPLOAD_IMAGES') {
-    const { files } = request;
-
-    // Sort files by filename in descending order
-    const sortedFiles = [...files].sort((a, b) => b.fileName.localeCompare(a.fileName));
-
-    // Extract textbookId from URL using string parsing
-    const href = window.location.href;
-    const textbookId = href.split('textbookID=')[1]?.split('&')[0];
-    const textbookType = href.split('textbookType=')[1]?.split('&')[0];
-
-    if (!textbookId) {
-      sendResponse({ error: 'No textbookID found in URL' });
-      return;
-    }
-
+    const { files, currentIndex, total } = request;
+    
     try {
-      // Create a map to store file names and CDN URLs
-      //const fileUrlMap = new Map();
+      const file = files[0]; // 由于现在是一次处理一个文件，所以只会有一个文件
+      
+      // 获取 textbookId 和 textbookType
+      const href = window.location.href;
+      const textbookId = href.split('textbookID=')[1]?.split('&')[0];
+      const textbookType = href.split('textbookType=')[1]?.split('&')[0];
 
-      for (const fileData of sortedFiles) {
-        // Convert base64 to Blob
-        const base64Response = await fetch(fileData.content);
-        const fileBlob = await base64Response.blob();
-
-        // Upload image with blob and original filename
-        const uploadResult = await doc_img_upload(fileBlob, fileData.fileName);
-
-        if (!uploadResult.data?.cdnUrl) {
-          throw new Error(`Upload failed for ${fileData.fileName} - no CDN URL received`);
-        }
-
-        // Store the file name and CDN URL in the map
-        //fileUrlMap.set(fileData.fileName, uploadResult.data.cdnUrl);
-
-        // Save page with the image URL
-        await doc_save_page(textbookId, uploadResult.data.cdnUrl, textbookType);
+      if (!textbookId) {
+        throw new Error('No textbookID found in URL');
       }
 
-      /*
-      // Convert the map to a sorted array of URLs based on file names
-      const sortedUrls = Array.from(fileUrlMap)
-        .sort(([a], [b]) => a.localeCompare(b)) // 改为 a.localeCompare(b) 实现升序排序
-        .map(([_, url]) => url); // 提取 URL
+      try {
+        // 转换 base64 为 Blob
+        const base64Response = await fetch(file.content);
+        const fileBlob = await base64Response.blob();
 
-      console.log(fileUrlMap);
-      console.log(sortedUrls);
+        // 上传图片
+        console.log(`正在上传第 ${currentIndex + 1}/${total} 个文件: ${file.fileName}`);
+        const uploadResult = await doc_img_upload(fileBlob, file.fileName);
+        
+        if (!uploadResult.data?.cdnUrl) {
+          throw new Error(`Upload failed for ${file.fileName} - no CDN URL received`);
+        }
 
-      // Get current textbook info
-      const textbookResponse = await textbook_info(textbookId);
-      const textbookData = textbookResponse.data; // Access the data field
+        // 保存页面
+        await doc_save_page(textbookId, uploadResult.data.cdnUrl, textbookType);
 
-      // Update questionPageList with new sorted URLs
-      const updatedQuestionPageList = [
-        ...(textbookData.shiti?.questionPageList || []),
-        ...sortedUrls
-      ];
+        // 返回成功结果
+        sendResponse({
+          success: true,
+          fileName: file.fileName,
+          cdnUrl: uploadResult.data.cdnUrl,
+          index: currentIndex
+        });
 
-      // Prepare data for save_book_info
-      const saveData = {
-        textbookID: Number(textbookId),
-        directoryPageList: textbookData.directory?.directoryPageList || null,
-        cipPageList: textbookData.base?.cipPageList || [],
-        coverPageList: textbookData.base?.coverPageList || [],
-        questionPageList: updatedQuestionPageList,
-        answerPageList: textbookData.shiti?.answerPageList || null,
-        year: textbookData.year,
-        bookFormat: textbookData.bookFormat,
-        bookVersionName: textbookData.bookVersionName,
-        grade: textbookData.grade,
-        isbn: textbookData.isbn,
-        publisherName: textbookData.publisherName,
-        subject: textbookData.subject,
-        title: textbookData.title,
-        volume: textbookData.volume,
-        volumeName: textbookData.volumeName
-      };
-
-      // Save updated textbook info
-      await save_book_info(saveData);
-
-        */
-
-        sendResponse({ success: true });
-      // Refresh the page after all files are processed
-      window.location.reload();
+      } catch (error) {
+        console.error('Upload error:', error);
+        sendResponse({
+          success: false,
+          error: error.message,
+          fileName: file.fileName,
+          index: currentIndex
+        });
+      }
     } catch (error) {
-      sendResponse({ error: error.message });
+      console.error('Upload error:', error);
+      sendResponse({
+        success: false,
+        error: error.message,
+        fileName: files[0].fileName,
+        index: currentIndex
+      });
     }
 
-    return true; // Keep message channel open for async operation
+    return true; // 保持消息通道开启
   }
 });
