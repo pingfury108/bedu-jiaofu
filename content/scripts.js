@@ -163,14 +163,14 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   }
 
   // 修改为通过 background.js 执行 llm_test
-  const llmAvailable = await chrome.runtime.sendMessage({ 
-    type: 'CHECK_LLM_AVAILABILITY', 
-    host: host, 
-    uname: uname 
+  const llmAvailable = await chrome.runtime.sendMessage({
+    type: 'CHECK_LLM_AVAILABILITY',
+    host: host,
+    uname: uname
   });
-  
+
   console.log('LLM availability check response:', llmAvailable); // 添加响应日志
-  
+
   if (!llmAvailable) {
     alert('无权使用bedu-jiaofu插件，请联系管理员');
     return true;
@@ -236,10 +236,10 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
 
   if (request.type === 'CONTENT_UPLOAD_IMAGES') {
     const { files, currentIndex, total } = request;
-    
+
     try {
       const file = files[0]; // 由于现在是一次处理一个文件，所以只会有一个文件
-      
+
       // 获取 textbookId 和 textbookType
       const href = window.location.href;
       const textbookId = href.split('textbookID=')[1]?.split('&')[0];
@@ -255,9 +255,8 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         const fileBlob = await base64Response.blob();
 
         // 上传图片
-        console.log(`正在上传第 ${currentIndex + 1}/${total} 个文件: ${file.fileName}`);
         const uploadResult = await doc_img_upload(fileBlob, file.fileName);
-        
+
         if (!uploadResult.data?.cdnUrl) {
           throw new Error(`Upload failed for ${file.fileName} - no CDN URL received`);
         }

@@ -5,6 +5,7 @@ export default function JiaoFu({ host, uname }) {
   const [selectedFiles, setSelectedFiles] = useState([])
   const [isUploading, setIsUploading] = useState(false)
   const [uploadStatus, setUploadStatus] = useState({})
+  const [uploadProgress, setUploadProgress] = useState(0)
   const fileInputRef = useRef(null)
 
   const handleFileChange = (e) => {
@@ -31,6 +32,7 @@ export default function JiaoFu({ host, uname }) {
     }
 
     setIsUploading(true);
+    setUploadProgress(0);
     try {
       const results = [];
       
@@ -84,8 +86,8 @@ export default function JiaoFu({ host, uname }) {
             ...response
           });
           
-          // 可以在这里添加进度更新的逻辑
-          console.log(`处理进度: ${i + 1}/${sortedFiles.length}`);
+          // Update progress
+          setUploadProgress(((i + 1) / sortedFiles.length) * 100);
           
         } catch (error) {
           console.error(`处理文件 ${file.name} 时发生错误:`, error);
@@ -106,6 +108,7 @@ export default function JiaoFu({ host, uname }) {
       alert('上传失败，请重试');
     } finally {
       setIsUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -150,11 +153,24 @@ export default function JiaoFu({ host, uname }) {
           <button
             className="btn btn-primary btn-sm"
             onClick={handleUpload}
-            disabled={isUploading || selectedFiles.length === 0}
+            disabled={selectedFiles.length === 0 || isUploading}
           >
             {isUploading ? '上传中...' : '上传图片'}
           </button>
         </div>
+        
+        {isUploading && (
+          <div className="w-full mt-4">
+            <progress 
+              className="progress progress-primary w-full" 
+              value={uploadProgress} 
+              max="100"
+            ></progress>
+            <div className="text-center text-sm mt-1">
+              {Math.round(uploadProgress)}%
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 文件列表 */}

@@ -55,7 +55,7 @@ export default function Main() {
     chrome.storage.sync.set({ activeTab: tab });
   };
 
-  return (<div className="container max-auto px-1">
+  return (<div className="container max-auto px-1 mt-1">
             <div className="tabs tabs-boxed">
               <a className={`tab ${activeTab === 'settings' ? 'tab-active' : ''}`} onClick={() => handleTabChange('settings')}>设置</a>
               <a className={`tab ${activeTab === 'ocr' ? 'tab-active' : ''}`} onClick={() => handleTabChange('ocr')}>文字识别</a>
