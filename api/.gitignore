@@ -1,3 +1,4 @@
 bjioafu
+*.exe
 .env
 config.json

@@ -70,6 +70,19 @@ func loadTokensFromFile(configFile string) error {
 		configFile = filepath.Join(workDir, defaultConfigFile)
 	}
 
+	// 如果文件不存在，创建并写入空配置
+	if _, err := os.Stat(configFile); os.IsNotExist(err) {
+		emptyConfig := Config{Users: []string{}}
+		data, err := json.Marshal(emptyConfig)
+		if err != nil {
+			return fmt.Errorf("创建空配置文件失败: %v", err)
+		}
+		if err := os.WriteFile(configFile, data, 0644); err != nil {
+			return fmt.Errorf("写入空配置文件失败: %v", err)
+		}
+	}
+
+	// 读取并解析配置文件
 	data, err := os.ReadFile(configFile)
 	if err != nil {
 		return fmt.Errorf("读取配置文件失败: %v", err)
