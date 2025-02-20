@@ -1,4 +1,4 @@
-import {ocr_text, run_llm} from "./lib.js";
+import {ocr_text, llm_test} from "./lib.js";
 
 console.log('Hello from the background script!')
 
@@ -111,5 +111,19 @@ chrome.commands.onCommand.addListener((command) => {
       });
     });
     break;
+  }
+});
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'CHECK_LLM_AVAILABILITY') {
+    llm_test(message.host, message.uname)
+      .then(result => {
+        sendResponse(result);
+      })
+      .catch(error => {
+        console.error('LLM test failed:', error);
+        sendResponse(false);
+      });
+    return true; // 保持消息通道开启
   }
 });
