@@ -35,14 +35,20 @@ export default function JiaoFu({ host, uname }) {
     setUploadProgress(0);
     try {
       const results = [];
-      
-      // 创建文件列表的副本并按文件名倒序排序
-      const sortedFiles = [...selectedFiles].sort((a, b) => b.name.localeCompare(a.name));
-      
+
+      // 创建文件列表的副本并按文件名中的数字倒序排序
+      const sortedFiles = [...selectedFiles].sort((a, b) => {
+        const getNumber = (filename) => {
+          const match = filename.match(/\d+/);
+          return match ? parseInt(match[0]) : 0;
+        };
+        return getNumber(b.name) - getNumber(a.name);  // 交换 a 和 b 的位置实现倒序
+      });
+
       // 串行处理每个文件
       for (let i = 0; i < sortedFiles.length; i++) {
         const file = sortedFiles[i];
-        
+
         // 转换单个文件为 base64
         const fileData = await new Promise((resolve) => {
           const reader = new FileReader();
@@ -70,25 +76,25 @@ export default function JiaoFu({ host, uname }) {
             currentIndex: i,
             total: sortedFiles.length
           });
-          
+
           // Add 1 second delay after each upload
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          
+          await new Promise(resolve => setTimeout(resolve, 3000));
+
           // Update upload status for this file
           setUploadStatus(prev => ({
             ...prev,
             [file.name]: true
           }));
-          
+
           // 将处理成功的结果存入数组
           results.push({
             ...fileData,
             ...response
           });
-          
+
           // Update progress
           setUploadProgress(((i + 1) / sortedFiles.length) * 100);
-          
+
         } catch (error) {
           console.error(`处理文件 ${file.name} 时发生错误:`, error);
           throw new Error(`文件 ${file.name} 上传失败`);
@@ -98,7 +104,7 @@ export default function JiaoFu({ host, uname }) {
       // 所有文件上传完成后，发送页面刷新信号到background.js
       if (results.length > 0) {
         // 发送消息到background.js
-        chrome.runtime.sendMessage({ 
+        chrome.runtime.sendMessage({
           type: 'SEND_REFRESH_SIGNAL'
         });
       }
@@ -158,12 +164,17 @@ export default function JiaoFu({ host, uname }) {
             {isUploading ? '上传中...' : '上传图片'}
           </button>
         </div>
-        
+
+          <div className="alert alert-warning my-2">
+        <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+        <span>上传过程中，请勿操作页面，上传完成后会自动刷新页面</span>
+      </div>
+
         {isUploading && (
           <div className="w-full mt-4">
-            <progress 
-              className="progress progress-primary w-full" 
-              value={uploadProgress} 
+            <progress
+              className="progress progress-primary w-full"
+              value={uploadProgress}
               max="100"
             ></progress>
             <div className="text-center text-sm mt-1">
