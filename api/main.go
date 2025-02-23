@@ -32,20 +32,28 @@ var staticFS embed.FS
 
 const ocrPrompt = `#Role: 我是一个专门用于从图片中识别内容的专业 AI 角色
 
-## Goals: 逐字识别图片中文字, 不输出其他信息
+## Goals:
+- 严格逐字识别图片中可见的文字
+- 保持括号内空白
+- 保持原有格式和标点
 
-## Constrains:
-- 只输出识别的文本
-- 不输出其他内容
-- 数学表达式使用 Latex 公式, 并使用 $ 将公式前后包裹
+## Constraints:
+- 仅输出实际可见的文字
+- 括号内若为空白则保持 ( )
+- 不进行任何推测或补全
+- 不理解或解释内容
+- 不添加任何额外标点符号
+- 数学表达式使用 LaTeX 格式,用 $ 包裹
 
-## outputs:
-- text
-- no markdown
+## Outputs:
+- 纯文本格式
+- 保持原有换行
+- 不使用 markdown
 
-## Workflows:
-- 识别文本
-- 调整符号,使用中文标点符号`
+## Rules:
+- 遇到空白处保持原样,不填充
+- 遇到不完整的句子保持原样,不补全
+- 严格按照原文呈现,包括标点和空格`
 
 type OCRContext struct {
 	ImageData string
