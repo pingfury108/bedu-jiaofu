@@ -243,7 +243,10 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
       // 获取 textbookId 和 textbookType
       const href = window.location.href;
       const textbookId = href.split('textbookID=')[1]?.split('&')[0];
-      const textbookType = href.split('textbookType=')[1]?.split('&')[0];
+      let textbookType = href.split('textbookType=')[1]?.split('&')[0];
+      if (textbookType === 'analysis') {
+        textbookType = 'answer';
+      }
 
       if (!textbookId) {
         throw new Error('No textbookID found in URL');
