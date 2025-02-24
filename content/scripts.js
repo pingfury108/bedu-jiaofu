@@ -297,3 +297,28 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     return true; // 保持消息通道开启
   }
 });
+
+// 处理字符插入消息
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'insert_character') {
+    const activeElement = document.activeElement;
+    if (activeElement && (activeElement.isContentEditable || activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'INPUT')) {
+      const start = activeElement.selectionStart;
+      const end = activeElement.selectionEnd;
+      const text = activeElement.value || activeElement.textContent;
+      
+      if (activeElement.isContentEditable) {
+        // 处理可编辑div
+        const selection = window.getSelection();
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+        range.insertNode(document.createTextNode(message.character));
+      } else {
+        // 处理input和textarea
+        const newText = text.substring(0, start) + message.character + text.substring(end);
+        activeElement.value = newText;
+        activeElement.selectionStart = activeElement.selectionEnd = start + message.character.length;
+      }
+    }
+  }
+});

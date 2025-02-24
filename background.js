@@ -16,10 +16,40 @@ if (isFirefoxLike) {
   })
 }
 
-// 添加一个变量来存储复制的HTML
-let storedHTML = '';
+// 创建字符插入菜单
+function createCharacterMenus() {
+  // 先移除已存在的菜单
+  chrome.contextMenus.remove("character-insert", () => {
+    // 创建主菜单
+    chrome.contextMenus.create({
+      id: "character-insert",
+      title: "字符插入",
+      parentId: "baidu-jiaofu",
+      contexts: ["editable"]
+    }, () => {
+      if (chrome.runtime.lastError) {
+        console.log('Menu creation error:', chrome.runtime.lastError);
+        return;
+      }
+      // 从存储中获取快捷字符并创建子菜单
+      chrome.storage.sync.get(['shortcuts'], (result) => {
+        if (result.shortcuts) {
+          result.shortcuts.forEach(shortcut => {
+            chrome.contextMenus.create({
+              id: `insert-char-${shortcut.name}`,
+              title: shortcut.name,
+              parentId: "character-insert",
+              contexts: ["editable"]
+            });
+          });
+        }
+      });
+    });
+  });
+}
 
 chrome.runtime.onInstalled.addListener(() => {
+  createCharacterMenus();
   chrome.contextMenus.create({
     id: "baidu-jiaofu",
     title: "百度教辅",
@@ -47,8 +77,21 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "format-math") {
     chrome.tabs.sendMessage(tab.id, { action: "format_math" });
   }
+  if (info.menuItemId.startsWith('insert-char-')) {
+    const shortcutName = info.menuItemId.replace('insert-char-', '');
+    chrome.storage.sync.get(['shortcuts'], (result) => {
+      if (result.shortcuts) {
+        const shortcut = result.shortcuts.find(s => s.name === shortcutName);
+        if (shortcut) {
+          chrome.tabs.sendMessage(tab.id, { 
+            action: "insert_character", 
+            character: shortcut.character 
+          });
+        }
+      }
+    });
+  }
 });
-
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const formatMessage = async (type, data, host, uname) => {
@@ -120,6 +163,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse(false);
       });
     return true; // 保持消息通道开启
+  }
+});
+
+// 监听存储变化
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (namespace === 'sync' && changes.shortcuts) {
+    // shortcuts 发生变化时重建菜单
+    createCharacterMenus();
   }
 });
 

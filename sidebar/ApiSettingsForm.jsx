@@ -20,12 +20,18 @@ const ApiSettingsForm = ({ host, handleHostChange }) => {
         const updatedShortcuts = [...shortcuts, newShortcut];
         setShortcuts(updatedShortcuts);
 
-        // Save to Chrome storage
+        // 保存到 Chrome storage 并触发菜单更新
         chrome.storage.sync.set({ shortcuts: updatedShortcuts });
 
-        // Reset form and close modal
+        // 重置表单并关闭模态框
         setNewShortcut({ name: '', character: '' });
         setIsModalOpen(false);
+    };
+
+    const handleDeleteShortcut = (index) => {
+        const updatedShortcuts = shortcuts.filter((_, i) => i !== index);
+        setShortcuts(updatedShortcuts);
+        chrome.storage.sync.set({ shortcuts: updatedShortcuts });
     };
 
     return (
@@ -64,6 +70,7 @@ const ApiSettingsForm = ({ host, handleHostChange }) => {
                                 <tr>
                                     <th>名称</th>
                                     <th>字符</th>
+                                    <th>操作</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -71,6 +78,14 @@ const ApiSettingsForm = ({ host, handleHostChange }) => {
                                     <tr key={index}>
                                         <td>{shortcut.name}</td>
                                         <td>{shortcut.character}</td>
+                                        <td>
+                                            <button 
+                                                className="btn btn-error btn-xs"
+                                                onClick={() => handleDeleteShortcut(index)}
+                                            >
+                                                删除
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -82,14 +97,14 @@ const ApiSettingsForm = ({ host, handleHostChange }) => {
             {/* Add Character Modal */}
             <dialog className={`modal ${isModalOpen ? 'modal-open' : ''}`}>
                 <div className="modal-box">
-                    <h3 className="font-bold text-lg">添加快速插入字符</h3>
+                    <h3 className="font-bold text-lg">添加快速插入的字符</h3>
                     <div className="form-control">
                         <label className="label">
                             <span className="label-text">名称</span>
                         </label>
                         <input
                             type="text"
-                            className="input input-bordered"
+                            className="input input-bordered input-sm w-full max-w-xs"
                             value={newShortcut.name}
                             onChange={(e) => setNewShortcut({...newShortcut, name: e.target.value})}
                         />
@@ -100,7 +115,7 @@ const ApiSettingsForm = ({ host, handleHostChange }) => {
                         </label>
                         <input
                             type="text"
-                            className="input input-bordered"
+                            className="input input-bordered input-sm w-full max-w-xs"
                             value={newShortcut.character}
                             onChange={(e) => setNewShortcut({...newShortcut, character: e.target.value})}
                         />
