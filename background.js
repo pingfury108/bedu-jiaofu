@@ -166,6 +166,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'UPDATE_SHORTCUTS') {
+    // 向所有标签页转发快捷键更新消息
+    chrome.tabs.query({}, (tabs) => {
+      tabs.forEach(tab => {
+        chrome.tabs.sendMessage(tab.id, {
+          type: 'SHORTCUTS_UPDATED',
+          shortcuts: message.shortcuts
+        });
+      });
+    });
+    // 更新右键菜单
+    createCharacterMenus();
+  }
+});
+
 // 监听存储变化
 chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === 'sync' && changes.shortcuts) {

@@ -51,6 +51,11 @@ const ApiSettingsForm = ({ host, handleHostChange }) => {
 
         setShortcuts(updatedShortcuts);
         chrome.storage.sync.set({ shortcuts: updatedShortcuts });
+        // 发送消息到 background script
+        chrome.runtime.sendMessage({
+            type: 'UPDATE_SHORTCUTS',
+            shortcuts: updatedShortcuts
+        });
         handleCloseModal();
     };
 
@@ -64,6 +69,11 @@ const ApiSettingsForm = ({ host, handleHostChange }) => {
         const updatedShortcuts = shortcuts.filter((_, i) => i !== index);
         setShortcuts(updatedShortcuts);
         chrome.storage.sync.set({ shortcuts: updatedShortcuts });
+        // 发送消息到 background script
+        chrome.runtime.sendMessage({
+            type: 'UPDATE_SHORTCUTS',
+            shortcuts: updatedShortcuts
+        });
     };
 
     const handleEditShortcut = (index) => {

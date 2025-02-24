@@ -1,4 +1,4 @@
-import {textbook_info, save_book_info,baidu_user_info, replaceLatexWithImages, replacePunctuation, doc_img_upload, doc_save_page, llm_test } from "../lib.js";
+import { textbook_info, save_book_info, baidu_user_info, replaceLatexWithImages, replacePunctuation, doc_img_upload, doc_save_page, llm_test } from "../lib.js";
 
 console.log('hello from content_scripts');
 
@@ -42,7 +42,7 @@ async function cleanPTags(html) {
   // 修改文本处理函数，添加标点符号替换
   async function processTextContent(textNode) {
     let text = textNode.textContent
-      .replace(/[\x20\t\n]/g, function(match) {
+      .replace(/[\x20\t\n]/g, function (match) {
         switch (match) {
           case ' ': return ' ';
           case '\t': return '\t';
@@ -78,11 +78,11 @@ async function cleanPTags(html) {
         // 如果是块级元素，将其转换为p
         if (getComputedStyle(child).display === 'block' ||
           ['div', 'ul', 'ol', 'li', 'section', 'article', 'pre', 'code'].includes(child.tagName.toLowerCase())) {
-            const newP = doc.createElement('p');
-            // 复制原始元素的内容到新p标签
-            newP.innerHTML = child.innerHTML;
-            child.parentNode.replaceChild(newP, child);
-          }
+          const newP = doc.createElement('p');
+          // 复制原始元素的内容到新p标签
+          newP.innerHTML = child.innerHTML;
+          child.parentNode.replaceChild(newP, child);
+        }
         // 递归处理嵌套元素
         convertToParagraphs(child); // 确保在转换后检查子元素
       }
@@ -151,7 +151,23 @@ function createEvent(eventName) {
 }
 
 function sendFixEvent(element) {
-  element.dispatchEvent(new Event('change', { bubbles: true, cancelable: true}));
+  element.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+}
+
+
+// 将字符转换为HTML实体的辅助函数
+function convertToHtmlEntities(str) {
+  const entities = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+    ' ': '&nbsp;',
+    '\n': '<br>',
+    '\t': '&nbsp;&nbsp;&nbsp;&nbsp;'
+  };
+  return str.split('').map(char => entities[char] || char).join('');
 }
 
 chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
@@ -200,7 +216,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
       //});
 
       // 使用 replaceWith 替换元素（保持引用）
-      selectedElement.innerHTML=temp.innerHTML;
+      selectedElement.innerHTML = temp.innerHTML;
       sendFixEvent(selectedElement);
 
       // 恢复滚动位置
@@ -211,7 +227,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
       cleanedElement.focus();
     }
     return true;
- };
+  };
 
   if (request.action === "format_math") {
     (async () => {
@@ -300,28 +316,15 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
 
 // 处理字符插入消息
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  // 将字符转换为HTML实体的辅助函数
-  function convertToHtmlEntities(str) {
-    const entities = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;',
-      ' ': '&nbsp;',
-      '\n': '<br>',
-      '\t': '&nbsp;&nbsp;&nbsp;&nbsp;'
-    };
-    return str.split('').map(char => entities[char] || char).join('');
-  }
+
 
   if (message.action === 'insert_character') {
     const activeElement = document.activeElement;
-    if (activeElement && (activeElement.isContentEditable || activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'INPUT')) {
+    if (activeElement && activeElement.isContentEditable) {
       const start = activeElement.selectionStart;
       const end = activeElement.selectionEnd;
       const text = activeElement.value || activeElement.textContent;
-      
+
       if (activeElement.isContentEditable) {
         // 处理可编辑div
         const selection = window.getSelection();
@@ -344,5 +347,83 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         activeElement.selectionStart = activeElement.selectionEnd = start + message.character.length;
       }
     }
+  }
+});
+
+// 声明快捷键变量
+let shortcuts = [];
+
+// 加载快捷键设置
+chrome.storage.sync.get(['shortcuts'], (result) => {
+  if (result.shortcuts) {
+    shortcuts = result.shortcuts;
+  }
+});
+
+// 添加快捷键监听功能
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.type === 'SHORTCUTS_UPDATED') {
+    shortcuts = request.shortcuts;
+    console.log('Shortcuts updated:', shortcuts);
+  }
+});
+
+// 监听键盘事件
+document.addEventListener('keydown', (e) => {
+  // 构建当前按下的快捷键组合
+  const keys = [];
+  if (e.ctrlKey) keys.push('Ctrl');
+  if (e.shiftKey) keys.push('Shift');
+  if (e.altKey) keys.push('Alt');
+  if (e.key !== 'Control' && e.key !== 'Shift' && e.key !== 'Alt') {
+    keys.push(e.key.toUpperCase());
+  }
+  const pressedShortcut = keys.join('+');
+  console.log('[Shortcut] Detected key combination:', pressedShortcut);
+
+  // 查找匹配的快捷键
+  const matchedShortcut = shortcuts.find(s => s.keyboardShortcut === pressedShortcut);
+
+  if (matchedShortcut) {
+    console.log('[Shortcut] Found matching shortcut:', matchedShortcut);
+    e.preventDefault(); // 阻止默认行为
+
+    // 触发字符插入
+    const activeElement = document.activeElement;
+    if (activeElement && activeElement.isContentEditable) {
+      console.log('[Shortcut] Attempting to insert character into contentEditable element');
+      // 发送消息给content script处理字符插入
+      if (activeElement && activeElement.isContentEditable) {
+        const start = activeElement.selectionStart;
+        const end = activeElement.selectionEnd;
+        const text = activeElement.value || activeElement.textContent;
+
+        if (activeElement.isContentEditable) {
+          // 处理可编辑div
+          const selection = window.getSelection();
+          const range = selection.getRangeAt(0);
+          const pos = range.startOffset;
+          // 将所有特殊字符转换为HTML实体
+          const convertedChar = convertToHtmlEntities(matchedShortcut.character);
+          // 创建一个临时元素来插入HTML实体
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = convertedChar;
+          const textNode = tempDiv.firstChild;
+          range.insertNode(textNode);
+          // 将光标移动到插入的字符后面
+          range.setStartAfter(textNode);
+          range.setEndAfter(textNode);
+        } else {
+          // 处理input和textarea，不需要特殊处理因为它们默认会保留所有空格
+          const newText = text.substring(0, start) + matchedShortcut.character + text.substring(end);
+          activeElement.value = newText;
+          activeElement.selectionStart = activeElement.selectionEnd = start + matchedShortcut.character.length;
+        }
+      }
+    } else {
+      console.log('[Shortcut] No valid target element for insertion');
+    }
+  } else {
+    console.log('[Shortcut] No matching shortcut found for:', pressedShortcut);
   }
 });
