@@ -4,6 +4,8 @@ const ApiSettingsForm = ({ host, handleHostChange }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [shortcuts, setShortcuts] = useState([]);
     const [newShortcut, setNewShortcut] = useState({ name: '', character: '' });
+    const [editingIndex, setEditingIndex] = useState(-1);
+    const [editedCharacter, setEditedCharacter] = useState('');
 
     useEffect(() => {
         // Load shortcuts from Chrome storage when component mounts
@@ -32,6 +34,23 @@ const ApiSettingsForm = ({ host, handleHostChange }) => {
         const updatedShortcuts = shortcuts.filter((_, i) => i !== index);
         setShortcuts(updatedShortcuts);
         chrome.storage.sync.set({ shortcuts: updatedShortcuts });
+    };
+
+    const handleEditShortcut = (index) => {
+        setEditingIndex(index);
+        setEditedCharacter(shortcuts[index].character);
+    };
+
+    const saveEdit = (index) => {
+        const updatedShortcuts = shortcuts.map((shortcut, i) => {
+            if (i === index) {
+                return { ...shortcut, character: editedCharacter };
+            }
+            return shortcut;
+        });
+        setShortcuts(updatedShortcuts);
+        chrome.storage.sync.set({ shortcuts: updatedShortcuts });
+        setEditingIndex(-1);
     };
 
     return (
@@ -77,8 +96,34 @@ const ApiSettingsForm = ({ host, handleHostChange }) => {
                                 {shortcuts.map((shortcut, index) => (
                                     <tr key={index}>
                                         <td>{shortcut.name}</td>
-                                        <td>{shortcut.character}</td>
                                         <td>
+                                            {editingIndex === index ? (
+                                                <input
+                                                    type="text"
+                                                    value={editedCharacter}
+                                                    onChange={(e) => setEditedCharacter(e.target.value)}
+                                                    className="input input-bordered input-xs w-20"
+                                                />
+                                            ) : (
+                                                shortcut.character
+                                            )}
+                                        </td>
+                                        <td className="space-x-2">
+                                            {editingIndex === index ? (
+                                                <button 
+                                                    className="btn btn-success btn-xs"
+                                                    onClick={() => saveEdit(index)}
+                                                >
+                                                    保存
+                                                </button>
+                                            ) : (
+                                                <button 
+                                                    className="btn btn-info btn-xs"
+                                                    onClick={() => handleEditShortcut(index)}
+                                                >
+                                                    编辑
+                                                </button>
+                                            )}
                                             <button 
                                                 className="btn btn-error btn-xs"
                                                 onClick={() => handleDeleteShortcut(index)}

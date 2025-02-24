@@ -300,6 +300,21 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
 
 // 处理字符插入消息
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // 将字符转换为HTML实体的辅助函数
+  function convertToHtmlEntities(str) {
+    const entities = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+      ' ': '&nbsp;',
+      '\n': '<br>',
+      '\t': '&nbsp;&nbsp;&nbsp;&nbsp;'
+    };
+    return str.split('').map(char => entities[char] || char).join('');
+  }
+
   if (message.action === 'insert_character') {
     const activeElement = document.activeElement;
     if (activeElement && (activeElement.isContentEditable || activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'INPUT')) {
@@ -311,10 +326,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // 处理可编辑div
         const selection = window.getSelection();
         const range = selection.getRangeAt(0);
-        range.deleteContents();
-        range.insertNode(document.createTextNode(message.character));
+        const pos = range.startOffset;
+        // 将所有特殊字符转换为HTML实体
+        const convertedChar = convertToHtmlEntities(message.character);
+        // 创建一个临时元素来插入HTML实体
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = convertedChar;
+        const textNode = tempDiv.firstChild;
+        range.insertNode(textNode);
+        // 将光标移动到插入的字符后面
+        range.setStartAfter(textNode);
+        range.setEndAfter(textNode);
       } else {
-        // 处理input和textarea
+        // 处理input和textarea，不需要特殊处理因为它们默认会保留所有空格
         const newText = text.substring(0, start) + message.character + text.substring(end);
         activeElement.value = newText;
         activeElement.selectionStart = activeElement.selectionEnd = start + message.character.length;
