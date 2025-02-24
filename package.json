@@ -3,7 +3,7 @@
   "name": "bedu-jiaofu",
   "description": "A baidu edu jioafu tools",
   "type": "module",
-  "version": "0.0.5",
+  "version": "0.0.7",
   "keywords": [
     "extension",
     "browser-extension",

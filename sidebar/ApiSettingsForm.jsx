@@ -92,7 +92,7 @@ const ApiSettingsForm = ({ host, handleHostChange }) => {
 
     return (
         <div className="flex flex-col items-center">
-            <div className="form-control w-full max-w-xs mt-2">
+            {/* <div className="form-control w-full max-w-xs mt-2">
                 <label className="label">
                     <span className="label-text">API 地址</span>
                 </label>
@@ -103,7 +103,7 @@ const ApiSettingsForm = ({ host, handleHostChange }) => {
                     placeholder="输入 API 地址"
                     className="input input-bordered input-sm"
                 />
-            </div>
+            </div> */}
 
             {/* Character Quick Insert Section */}
             <div className="collapse collapse-arrow w-full mt-2">
