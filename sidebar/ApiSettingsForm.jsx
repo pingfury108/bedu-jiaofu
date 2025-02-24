@@ -109,9 +109,9 @@ const ApiSettingsForm = ({ host, handleHostChange }) => {
             <div className="collapse collapse-arrow w-full mt-2">
                 <input type="checkbox" /> 
                 <div className="collapse-title label-text">
-                    字符快速插入
+                    字符插入设置
                 </div>
-                <div className="collapse-content">
+                <div className="collapse-content overflow-x-auto whitespace-nowrap">
                     <button 
                         className="btn btn-primary btn-sm mb-4"
                         onClick={handleAddNewShortcut}
