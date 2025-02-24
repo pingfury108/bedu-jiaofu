@@ -39,10 +39,10 @@ export default function JiaoFu({ host, uname }) {
       // 创建文件列表的副本并按文件名中的数字倒序排序
       const sortedFiles = [...selectedFiles].sort((a, b) => {
         const getNumber = (filename) => {
-          const match = filename.match(/\d+/);
-          return match ? parseInt(match[0]) : 0;
+          const match = filename.match(/_(\d+)\./);
+          return match ? parseInt(match[1]) : 0;
         };
-        return getNumber(b.name) - getNumber(a.name);  // 交换 a 和 b 的位置实现倒序
+        return getNumber(b.name) - getNumber(a.name);  // 倒序排序
       });
 
       // 串行处理每个文件
@@ -78,7 +78,7 @@ export default function JiaoFu({ host, uname }) {
           });
 
           // Add 1 second delay after each upload
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          await new Promise(resolve => setTimeout(resolve, 2000));
 
           // Update upload status for this file
           setUploadStatus(prev => ({
