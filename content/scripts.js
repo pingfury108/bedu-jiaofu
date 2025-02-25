@@ -178,6 +178,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     return;
   }
 
+  /*
   // 修改为通过 background.js 执行 llm_test
   const llmAvailable = await chrome.runtime.sendMessage({
     type: 'CHECK_LLM_AVAILABILITY',
@@ -191,6 +192,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     alert('无权使用bedu-jiaofu插件，请联系管理员');
     return true;
   }
+   */
 
   if (request.action === "font_format") {
     const selectedElement = document.activeElement;

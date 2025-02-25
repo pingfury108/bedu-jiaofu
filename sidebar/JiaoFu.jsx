@@ -25,11 +25,13 @@ export default function JiaoFu({ host, uname }) {
   const handleUpload = async () => {
     if (selectedFiles.length === 0) return;
 
+    /*
     const hasError = await llm_test(host, uname);
     if (!hasError) {
       alert('无权使用bedu-jiaofu插件，请联系管理员');
       return;
     }
+     */
 
     setIsUploading(true);
     setUploadProgress(0);
