@@ -242,7 +242,8 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
           return;
         }
         
-        // Show loading notification
+        // Show loading notification and start timing
+        const startTime = performance.now();
         const notificationId = showNotification('正在渲染数学公式...', 'info', true);
         
         const temp = document.createElement('div');
@@ -251,9 +252,10 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         activeElement.innerHTML = result;
         sendFixEvent(activeElement);
         
-        // Show success notification and remove loading
+        // Calculate duration and show success notification
+        const duration = ((performance.now() - startTime) / 1000).toFixed(2);
         hideNotification(notificationId);
-        showNotification('数学公式渲染完成', 'success');
+        showNotification(`数学公式渲染完成，耗时 ${duration} 秒`, 'success');
       } catch (error) {
         // Show error notification
         showNotification('数学公式渲染失败：' + error.message, 'error');

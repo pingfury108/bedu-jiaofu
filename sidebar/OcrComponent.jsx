@@ -2,11 +2,11 @@ import React from 'react';
 import { useDropzone } from 'react-dropzone';
 import CopyButton from './CopyButton.jsx';
 
-
 const OcrComponent = ({ host, uname }) => {
   const [selectedImage, setSelectedImage] = React.useState(null);
   const [recognizedText, setRecognizedText] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
+  const [processTime, setProcessTime] = React.useState(null);
 
   const onDrop = (acceptedFiles) => {
         const file = acceptedFiles[0];
@@ -36,19 +36,23 @@ const OcrComponent = ({ host, uname }) => {
     const handleRecognition = () => {
       if (selectedImage) {
         setIsLoading(true);
+        const startTime = Date.now();
         chrome.runtime.sendMessage(
           { type: 'OCR',
             data: { 'image_data': selectedImage },
             host,
             uname
           }, (response) => {
+            const endTime = Date.now();
+            const timeUsed = ((endTime - startTime) / 1000).toFixed(1);
+            setProcessTime(timeUsed);
             setIsLoading(false);
             if (response && response.formatted) {
               setRecognizedText(response.formatted);
             }
           });
         }
-    };``
+    };
 
   const { getRootProps, getInputProps } = useDropzone({ onDrop });
 
@@ -75,7 +79,7 @@ const OcrComponent = ({ host, uname }) => {
         </div>
         <div className="mt-2">
           <div className="label flex justify-between items-center">
-            <span className="label-text">结果</span>
+            <span className="label-text">结果 {processTime && `(用时${processTime}秒)`}</span>
             <CopyButton text={recognizedText} />
           </div>
           <textarea
