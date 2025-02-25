@@ -236,15 +236,27 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
       try {
         const activeElement = document.activeElement;
         if (!activeElement) {
+          // Show error notification
+          showNotification('错误：未找到活动元素', 'error');
           sendResponse({ success: false, error: 'No active element found' });
           return;
         }
+        
+        // Show loading notification
+        const notificationId = showNotification('正在渲染数学公式...', 'info', true);
+        
         const temp = document.createElement('div');
         temp.innerHTML = activeElement.innerHTML;
         const result = await replaceLatexWithImages(temp.innerHTML);
         activeElement.innerHTML = result;
         sendFixEvent(activeElement);
+        
+        // Show success notification and remove loading
+        hideNotification(notificationId);
+        showNotification('数学公式渲染完成', 'success');
       } catch (error) {
+        // Show error notification
+        showNotification('数学公式渲染失败：' + error.message, 'error');
         console.error({ success: false, error: error.message });
       }
     })();
@@ -429,3 +441,77 @@ document.addEventListener('keydown', (e) => {
     console.log('[Shortcut] No matching shortcut found for:', pressedShortcut);
   }
 });
+
+// 添加通知系统
+function showNotification(message, type = 'info', isLoading = false) {
+  const notificationId = 'notification-' + Date.now();
+  const notification = document.createElement('div');
+  notification.id = notificationId;
+  notification.className = `notification notification-${type}`;
+  
+  // Add loading spinner if needed
+  if (isLoading) {
+    notification.innerHTML = `
+      <div class="notification-spinner"></div>
+      <span>${message}</span>
+    `;
+  } else {
+    notification.textContent = message;
+  }
+  
+  // Add notification styles if not already present
+  if (!document.getElementById('notification-styles')) {
+    const styles = document.createElement('style');
+    styles.id = 'notification-styles';
+    styles.textContent = `
+      .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 24px;
+        border-radius: 4px;
+        z-index: 9999;
+        animation: slideIn 0.3s ease-out;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .notification-info { background: #e3f2fd; color: #1976d2; }
+      .notification-success { background: #e8f5e9; color: #2e7d32; }
+      .notification-error { background: #ffebee; color: #c62828; }
+      .notification-spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.75s linear infinite;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+    `;
+    document.head.appendChild(styles);
+  }
+  
+  document.body.appendChild(notification);
+  
+  // Auto hide non-loading notifications
+  if (!isLoading) {
+    setTimeout(() => hideNotification(notificationId), 3000);
+  }
+  
+  return notificationId;
+}
+
+function hideNotification(notificationId) {
+  const notification = document.getElementById(notificationId);
+  if (notification) {
+    notification.style.animation = 'slideIn 0.3s ease-out reverse';
+    setTimeout(() => notification.remove(), 300);
+  }
+}
