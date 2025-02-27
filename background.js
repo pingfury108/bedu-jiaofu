@@ -16,57 +16,92 @@ if (isFirefoxLike) {
   })
 }
 
+
 // 创建字符插入菜单
 function createCharacterMenus() {
-  // 先移除已存在的菜单
-  chrome.contextMenus.remove("character-insert", () => {
-    // 创建主菜单
-    chrome.contextMenus.create({
-      id: "character-insert",
-      title: "字符插入",
-      parentId: "baidu-jiaofu",
-      contexts: ["editable"]
-    }, () => {
+  console.log('开始创建字符插入菜单');
+  
+  // 先移除已存在的菜单以避免重复
+  try {
+    chrome.contextMenus.remove('character-insert', () => {
       if (chrome.runtime.lastError) {
-        console.log('Menu creation error:', chrome.runtime.lastError);
+        console.log('移除旧菜单时出错（首次创建时属正常）:', chrome.runtime.lastError);
+      }
+    });
+  } catch (e) {
+    console.log('移除菜单时发生异常:', e);
+  }
+
+  // 创建主菜单
+  chrome.contextMenus.create({
+    id: "character-insert",
+    title: "字符插入",
+    parentId: "jiaofu-tools",
+    contexts: ["editable"] // 只在可编辑区域显示
+  }, () => {
+    if (chrome.runtime.lastError) {
+      console.error('创建主菜单失败:', chrome.runtime.lastError);
+      return;
+    }
+    console.log('主菜单创建成功');
+
+    // 从存储中获取快捷字符并创建子菜单
+    chrome.storage.sync.get(['shortcuts'], (result) => {
+      if (chrome.runtime.lastError) {
+        console.error('获取shortcuts数据失败:', chrome.runtime.lastError);
         return;
       }
-      // 从存储中获取快捷字符并创建子菜单
-      chrome.storage.sync.get(['shortcuts'], (result) => {
-        if (result.shortcuts) {
-          result.shortcuts.forEach(shortcut => {
-            chrome.contextMenus.create({
-              id: `insert-char-${shortcut.name}`,
-              title: shortcut.name,
-              parentId: "character-insert",
-              contexts: ["editable"]
-            });
-          });
+
+      if (!result.shortcuts || !Array.isArray(result.shortcuts)) {
+        console.log('没有找到快捷字符数据或数据格式不正确');
+        return;
+      }
+
+      console.log('找到', result.shortcuts.length, '个快捷字符');
+      
+      // 逐个创建子菜单
+      result.shortcuts.forEach((shortcut, index) => {
+        if (!shortcut.name) {
+          console.error('快捷字符缺少name属性:', shortcut);
+          return;
         }
+
+        chrome.contextMenus.create({
+          id: `insert-char-${shortcut.name}`,
+          title: `${shortcut.name} ${shortcut.character || ''}`,
+          parentId: "character-insert",
+          contexts: ["editable"]
+        }, () => {
+          if (chrome.runtime.lastError) {
+            console.error(`创建子菜单 ${shortcut.name} 失败:`, chrome.runtime.lastError);
+          } else {
+            console.log(`创建子菜单 ${shortcut.name} 成功`);
+          }
+        });
       });
     });
   });
 }
 
 chrome.runtime.onInstalled.addListener(() => {
-  createCharacterMenus();
   chrome.contextMenus.create({
-    id: "baidu-jiaofu",
-    title: "百度教辅",
+    id: "jiaofu-tools",
+    title: "教辅工具",
     contexts: ["all"] // 可选：all, page, selection, image, link, editable, video, audio
   }, function() {
     chrome.contextMenus.create({
       id: "font-format",
       title: "字体格式化",
-      parentId: "baidu-jiaofu",
+      parentId: "jiaofu-tools",
        contexts: ["all"]
     });
     chrome.contextMenus.create({
       id: "format-math",
       title: "渲染数学公式",
-      parentId: "baidu-jiaofu",
+      parentId: "jiaofu-tools",
       contexts: ["all"]
     });
+    createCharacterMenus();
   });
 });
 
@@ -83,9 +118,9 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       if (result.shortcuts) {
         const shortcut = result.shortcuts.find(s => s.name === shortcutName);
         if (shortcut) {
-          chrome.tabs.sendMessage(tab.id, { 
-            action: "insert_character", 
-            character: shortcut.character 
+          chrome.tabs.sendMessage(tab.id, {
+            action: "insert_character",
+            character: shortcut.character
           });
         }
       }
@@ -109,6 +144,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (['OCR'].includes(message.type)) {
     formatMessage(message.type, message.data, message.host, message.uname);
     return true; // 保持消息通道开放以等待异步响应
+  }
+  if (message.type === 'BAIDU_USERNAME_UPDATED') {
+    // 转发消息到所有标签页
+    chrome.runtime.sendMessage({
+      type: 'SIDEBAR_USERNAME_UPDATE',
+      userName: message.userName
+    });
+    return true;
   }
 });
 

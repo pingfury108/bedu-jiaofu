@@ -14,7 +14,7 @@ export default function Main() {
       if (result.host) {
         setHost(result.host);
       } else {
-        setHost('http://117.158.22.150:8082');
+        setHost('http://123.56.230.207:8099');
       }
     });
   }, []);
@@ -33,11 +33,26 @@ export default function Main() {
   };
 
   useEffect(() => {
+    // 从 storage 加载初始用户名
     chrome.storage.sync.get(['baidu_user_name'], (result) => {
       if (result.baidu_user_name) {
         setName(result.baidu_user_name);
       }
     });
+
+    // 监听来自 background.js 的用户名更新消息
+    const messageListener = (message) => {
+      if (message.type === 'SIDEBAR_USERNAME_UPDATE') {
+        setName(message.userName);
+      }
+    };
+
+    chrome.runtime.onMessage.addListener(messageListener);
+
+    // 清理监听器
+    return () => {
+      chrome.runtime.onMessage.removeListener(messageListener);
+    };
   }, []);
 
   useEffect(() => {

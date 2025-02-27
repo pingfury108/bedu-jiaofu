@@ -19,8 +19,14 @@ chrome.storage.sync.get(['host'], (result) => {
     console.log('Baidu user info response:', response);
     if (response && response.data && response.data.userName) {
       // 将用户名存储到 Chrome storage
-      chrome.storage.sync.set({ baidu_user_name: response.data.userName });
-      uname = response.data.userName
+      chrome.storage.sync.set({ baidu_user_name: response.data.userName }, () => {
+        // 发送消息到 background.js
+        chrome.runtime.sendMessage({
+          type: 'BAIDU_USERNAME_UPDATED',
+          userName: response.data.userName
+        });
+      });
+      uname = response.data.userName;
     }
   } catch (error) {
     console.error('Error getting baidu user info:', error);

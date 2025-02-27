@@ -1,8 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/chrome-manifest.json",
   "manifest_version": 3,
-  "version": "0.0.9",
-  "name": "bedu-jiaofu",
+  "version": "0.1.0",
+  "name": "jiaofu-tools",
   "description": "A baidu edu jiaofu tools",
   "author": "pingfury@outlook.com",
   "icons": {
