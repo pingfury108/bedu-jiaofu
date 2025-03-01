@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-contrib/gzip"
 	"github.com/urfave/cli/v2"
 
 	_ "github.com/joho/godotenv/autoload"
@@ -217,7 +218,11 @@ func setupRouter(debug bool, apiKey, apiBase, modelName string, adminKey string)
 
 	// Serve static files from embedded FS under "/public" URL path
 	subFS, _ := fs.Sub(staticFS, "static")
-	r.StaticFS("/public", http.FS(subFS))
+	
+	// 只对/public路径使用gzip中间件压缩静态文件响应
+	public := r.Group("/public")
+	public.Use(gzip.Gzip(gzip.DefaultCompression))
+	public.StaticFS("/", http.FS(subFS))
 
 	// 添加 CORS 中间件
 	r.Use(func(c *gin.Context) {
