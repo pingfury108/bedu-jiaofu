@@ -11,8 +11,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/gzip"
+	"github.com/gin-gonic/gin"
 	"github.com/urfave/cli/v2"
 
 	_ "github.com/joho/godotenv/autoload"
@@ -45,6 +45,33 @@ const ocrPrompt = `#Role: 我是一个专门用于从图片中识别内容的专
 - 不理解或解释内容
 - 不添加任何额外标点符号
 - 数学表达式使用 LaTeX 格式,用 $ 包裹
+
+## Outputs:
+- 纯文本格式
+- 保持原有换行
+- 不使用 markdown
+
+## Rules:
+- 遇到空白处保持原样,不填充
+- 遇到不完整的句子保持原样,不补全
+- 严格按照原文呈现,包括标点和空格`
+
+const ocrFormatPrompt = `#Role: 我是一个专门用于从图片中识别内容的专业 AI 角色
+
+## Goals:
+- 严格逐字识别图片中可见的文字
+- 保持括号内空白
+- 保持原有格式和标点
+- 在保持原文的基础上, 适当调整排版, 增强可读性
+
+## Constraints:
+- 仅输出实际可见的文字
+- 括号内若为空白则保持 ( )
+- 不进行任何推测或补全
+- 不理解或解释内容
+- 不添加任何额外标点符号
+- 数学表达式使用 LaTeX 格式,用 $ 包裹
+- 不增加没有的内容
 
 ## Outputs:
 - 纯文本格式
@@ -143,7 +170,7 @@ func authMiddleware() gin.HandlerFunc {
 	}
 }
 
-func arkOCR(ctx OCRContext, apiKey, apiBase, modelName string) (string, error) {
+func arkOCR(ctx OCRContext, apiKey, apiBase, modelName, prompt string) (string, error) {
 	if apiKey == "" {
 		return "", fmt.Errorf("API key is required")
 	}
@@ -158,13 +185,18 @@ func arkOCR(ctx OCRContext, apiKey, apiBase, modelName string) (string, error) {
 
 	client := arkruntime.NewClientWithApiKey(apiKey)
 
+	// 如果没有提供自定义提示词，则使用默认的 ocrPrompt
+	if prompt == "" {
+		prompt = ocrPrompt
+	}
+
 	req := model.ChatCompletionRequest{
 		Model: modelName,
 		Messages: []*model.ChatCompletionMessage{
 			{
 				Role: model.ChatMessageRoleSystem,
 				Content: &model.ChatCompletionMessageContent{
-					StringValue: volcengine.String(ocrPrompt),
+					StringValue: volcengine.String(prompt),
 				},
 			},
 
@@ -218,7 +250,7 @@ func setupRouter(debug bool, apiKey, apiBase, modelName string, adminKey string)
 
 	// Serve static files from embedded FS under "/public" URL path
 	subFS, _ := fs.Sub(staticFS, "static")
-	
+
 	// 只对/public路径使用gzip中间件压缩静态文件响应
 	public := r.Group("/public")
 	public.Use(gzip.Gzip(gzip.DefaultCompression))
@@ -258,7 +290,7 @@ func setupRouter(debug bool, apiKey, apiBase, modelName string, adminKey string)
 
 			result, err := arkOCR(OCRContext{
 				ImageData: request.ImageData,
-			}, apiKey, apiBase, modelName)
+			}, apiKey, apiBase, modelName, ocrFormatPrompt)
 
 			if err != nil {
 				log.Printf("OCR错误: %v", err)
@@ -298,7 +330,7 @@ func setupRouter(debug bool, apiKey, apiBase, modelName string, adminKey string)
 
 			result, err := arkOCR(OCRContext{
 				ImageData: request.ImageData,
-			}, apiKey, apiBase, modelName)
+			}, apiKey, apiBase, modelName, ocrPrompt)
 
 			if err != nil {
 				log.Printf("OCR error: %v", err)

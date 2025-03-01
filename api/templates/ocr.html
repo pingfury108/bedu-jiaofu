@@ -72,7 +72,7 @@
                                 </div>
                                 <div class="card">
                                     <div class="card-body" id="resultText"></div>
-                                    <div class="card-body" id="originalText" style="display: none;"></div>
+                                    <textarea class="card-body form-control" id="originalText" style="display: none; min-height: 200px;"></textarea>
                                 </div>
                                 <div class="d-grid gap-2 mt-2">
                                     <button type="button" class="btn btn-outline-primary" id="copyButton">复制结果</button>
@@ -113,7 +113,7 @@
             function clearRecognitionResults() {
                 resultContainer.style.display = 'none';
                 resultText.innerHTML = '';
-                originalText.textContent = '';
+                originalText.value = '';
             }
 
             // 处理文件选择
@@ -214,7 +214,7 @@
                     loadingIndicator.style.display = 'none';
                     
                     // 保存原始文本
-                    originalText.textContent = data.text;
+                    originalText.value = data.text;
                     
                     // 渲染结果（包含LaTeX公式渲染）
                     resultText.innerHTML = renderMathInText(data.text);
@@ -233,8 +233,8 @@
             copyButton.addEventListener('click', function() {
                 // 根据当前显示的是哪个文本区域来决定复制哪个内容
                 const text = originalText.style.display === 'none' ? 
-                    originalText.textContent : // 复制原始文本，即使显示的是渲染后的文本
-                    originalText.textContent;  // 复制原始文本
+                    resultText.textContent.replace(/<br>/g, '\n') : // 复制渲染后的文本（移除HTML标签）
+                    originalText.value;  // 复制原始文本（使用value而不是textContent，因为现在是textarea）
                 
                 navigator.clipboard.writeText(text).then(() => {
                     alert('已复制到剪贴板');
@@ -246,6 +246,9 @@
             
             // 切换按钮事件
             renderedButton.addEventListener('click', function() {
+                // 从原始文本更新渲染后的文本
+                resultText.innerHTML = renderMathInText(originalText.value);
+                
                 resultText.style.display = 'block';
                 originalText.style.display = 'none';
                 renderedButton.classList.remove('btn-outline-primary');
