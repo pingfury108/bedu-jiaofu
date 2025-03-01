@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR 图片识别</title>
+    <link href="/public/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <style>
+        #imagePreview {
+            max-width: 100%;
+            max-height: 300px;
+            margin-top: 10px;
+            display: none;
+        }
+        #resultText {
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .loading {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="card-title text-center mb-4">OCR 图片文字识别</h3>
+                        <form id="ocrForm">
+                            <div class="mb-3">
+                                <label for="imageInput" class="form-label">请粘贴或选择图片</label>
+                                <div class="input-group">
+                                    <input type="file" class="form-control" id="imageInput" accept="image/*">
+                                    <button type="button" class="btn btn-outline-secondary" id="pasteButton">粘贴图片</button>
+                                </div>
+                                <small class="form-text text-muted">支持粘贴剪贴板中的图片（Ctrl+V）</small>
+                                <img id="imagePreview" class="img-thumbnail" alt="图片预览">
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary" id="submitButton">识别文字</button>
+                            </div>
+                        </form>
+                        
+                        <div class="mt-4">
+                            <div class="loading text-center" id="loadingIndicator">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">加载中...</span>
+                                </div>
+                                <p class="mt-2">正在识别中，请稍候...</p>
+                            </div>
+                            
+                            <div class="mt-3" id="resultContainer" style="display: none;">
+                                <h4>识别结果：</h4>
+                                <div class="card">
+                                    <div class="card-body" id="resultText"></div>
+                                </div>
+                                <div class="d-grid gap-2 mt-2">
+                                    <button type="button" class="btn btn-outline-primary" id="copyButton">复制结果</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/public/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const imageInput = document.getElementById('imageInput');
+            const imagePreview = document.getElementById('imagePreview');
+            const ocrForm = document.getElementById('ocrForm');
+            const resultContainer = document.getElementById('resultContainer');
+            const resultText = document.getElementById('resultText');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const copyButton = document.getElementById('copyButton');
+            const pasteButton = document.getElementById('pasteButton');
+            let imageData = null;
+
+            // 处理文件选择
+            imageInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        imagePreview.src = event.target.result;
+                        imagePreview.style.display = 'block';
+                        imageData = event.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            // 处理粘贴按钮点击
+            pasteButton.addEventListener('click', function() {
+                navigator.clipboard.read().then(items => {
+                    for (const item of items) {
+                        if (item.types.includes('image/png') || 
+                            item.types.includes('image/jpeg') || 
+                            item.types.includes('image/gif')) {
+                            const type = item.types.find(t => t.startsWith('image/'));
+                            item.getType(type).then(blob => {
+                                const reader = new FileReader();
+                                reader.onload = function(event) {
+                                    imagePreview.src = event.target.result;
+                                    imagePreview.style.display = 'block';
+                                    imageData = event.target.result;
+                                };
+                                reader.readAsDataURL(blob);
+                            });
+                            break;
+                        }
+                    }
+                }).catch(err => {
+                    console.error('粘贴失败:', err);
+                    alert('粘贴图片失败，请尝试直接选择图片文件');
+                });
+            });
+
+            // 处理页面粘贴事件
+            document.addEventListener('paste', function(e) {
+                const items = e.clipboardData.items;
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf('image') !== -1) {
+                        const blob = items[i].getAsFile();
+                        const reader = new FileReader();
+                        reader.onload = function(event) {
+                            imagePreview.src = event.target.result;
+                            imagePreview.style.display = 'block';
+                            imageData = event.target.result;
+                        };
+                        reader.readAsDataURL(blob);
+                        break;
+                    }
+                }
+            });
+
+            // 处理表单提交
+            ocrForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                if (!imageData) {
+                    alert('请先选择或粘贴图片');
+                    return;
+                }
+
+                // 显示加载指示器
+                loadingIndicator.style.display = 'block';
+                resultContainer.style.display = 'none';
+                
+                // 发送OCR请求
+                fetch('/s/ocr', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        image_data: imageData
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('网络响应错误');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // 隐藏加载指示器
+                    loadingIndicator.style.display = 'none';
+                    
+                    // 显示结果
+                    resultText.textContent = data.text;
+                    resultContainer.style.display = 'block';
+                })
+                .catch(error => {
+                    loadingIndicator.style.display = 'none';
+                    alert('识别失败: ' + error.message);
+                    console.error('Error:', error);
+                });
+            });
+
+            // 复制结果按钮
+            copyButton.addEventListener('click', function() {
+                const text = resultText.textContent;
+                navigator.clipboard.writeText(text).then(() => {
+                    alert('已复制到剪贴板');
+                }).catch(err => {
+                    console.error('复制失败:', err);
+                    alert('复制失败，请手动选择并复制');
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>

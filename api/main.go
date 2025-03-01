@@ -235,6 +235,46 @@ func setupRouter(debug bool, apiKey, apiBase, modelName string, adminKey string)
 		c.Next()
 	})
 
+	s := r.Group("/s")
+	{
+
+		// 添加非认证的OCR路由
+		s.POST("/ocr", func(c *gin.Context) {
+			var request struct {
+				ImageData string `json:"image_data" binding:"required"`
+			}
+
+			if err := c.ShouldBindJSON(&request); err != nil {
+				c.JSON(400, gin.H{
+					"error": "无效请求: " + err.Error(),
+				})
+				return
+			}
+
+			result, err := arkOCR(OCRContext{
+				ImageData: request.ImageData,
+			}, apiKey, apiBase, modelName)
+
+			if err != nil {
+				log.Printf("OCR错误: %v", err)
+				c.JSON(500, gin.H{
+					"error": "OCR处理过程中发生内部服务器错误",
+				})
+				return
+			}
+
+			c.JSON(200, gin.H{
+				"text": result,
+			})
+		})
+
+		// OCR页面路由
+		s.GET("/Zamc6CQ", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "ocr.html", nil)
+		})
+
+	}
+
 	// 在 /llm 路由组中使用认证中间件
 	llmGroup := r.Group("/llm")
 	llmGroup.Use(authMiddleware())
