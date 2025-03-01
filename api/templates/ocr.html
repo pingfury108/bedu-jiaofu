@@ -7,6 +7,9 @@
     <title>OCR 图片识别</title>
     <link href="/public/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <!-- KaTeX CSS -->
+    <link rel="stylesheet" href="/public/katex.min.css" 
+        integrity="sha384-GvrOXuhMATgEsSwCs4smul74iXGOixntILdUW9XmUC6+HX0sLNAK3q71HotJqlAn" crossorigin="anonymous">
     <style>
         #imagePreview {
             max-width: 100%;
@@ -14,10 +17,16 @@
             margin-top: 10px;
             display: none;
         }
-        #resultText {
+        #resultText, #originalText {
             white-space: pre-wrap;
             max-height: 300px;
             overflow-y: auto;
+        }
+        .toggle-buttons {
+            margin-bottom: 10px;
+        }
+        .toggle-buttons .btn {
+            margin-right: 5px;
         }
         .loading {
             display: none;
@@ -57,8 +66,13 @@
                             
                             <div class="mt-3" id="resultContainer" style="display: none;">
                                 <h4>识别结果：</h4>
+                                <div class="toggle-buttons">
+                                    <button type="button" class="btn btn-sm btn-primary" id="renderedButton">渲染后文本</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="originalButton">原始文本</button>
+                                </div>
                                 <div class="card">
                                     <div class="card-body" id="resultText"></div>
+                                    <div class="card-body" id="originalText" style="display: none;"></div>
                                 </div>
                                 <div class="d-grid gap-2 mt-2">
                                     <button type="button" class="btn btn-outline-primary" id="copyButton">复制结果</button>
@@ -74,6 +88,11 @@
     <script src="/public/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
         crossorigin="anonymous"></script>
+    <!-- KaTeX JS -->
+    <script src="/public/katex.min.js" 
+        integrity="sha384-cpW21h6RZv/phavutF+AuVYrr+dA8xD9zs6FwLpaCct6O9ctzYFfFr4dgmgccOTx" crossorigin="anonymous"></script>
+    <script src="/public/auto-render.min.js"
+        integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"></script>
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -82,10 +101,20 @@
             const ocrForm = document.getElementById('ocrForm');
             const resultContainer = document.getElementById('resultContainer');
             const resultText = document.getElementById('resultText');
+            const originalText = document.getElementById('originalText');
             const loadingIndicator = document.getElementById('loadingIndicator');
             const copyButton = document.getElementById('copyButton');
             const pasteButton = document.getElementById('pasteButton');
+            const renderedButton = document.getElementById('renderedButton');
+            const originalButton = document.getElementById('originalButton');
             let imageData = null;
+
+            // 清空识别结果的函数
+            function clearRecognitionResults() {
+                resultContainer.style.display = 'none';
+                resultText.innerHTML = '';
+                originalText.textContent = '';
+            }
 
             // 处理文件选择
             imageInput.addEventListener('change', function(e) {
@@ -96,6 +125,8 @@
                         imagePreview.src = event.target.result;
                         imagePreview.style.display = 'block';
                         imageData = event.target.result;
+                        // 清空之前的识别结果
+                        clearRecognitionResults();
                     };
                     reader.readAsDataURL(file);
                 }
@@ -115,6 +146,8 @@
                                     imagePreview.src = event.target.result;
                                     imagePreview.style.display = 'block';
                                     imageData = event.target.result;
+                                    // 清空之前的识别结果
+                                    clearRecognitionResults();
                                 };
                                 reader.readAsDataURL(blob);
                             });
@@ -138,6 +171,8 @@
                             imagePreview.src = event.target.result;
                             imagePreview.style.display = 'block';
                             imageData = event.target.result;
+                            // 清空之前的识别结果
+                            clearRecognitionResults();
                         };
                         reader.readAsDataURL(blob);
                         break;
@@ -178,8 +213,13 @@
                     // 隐藏加载指示器
                     loadingIndicator.style.display = 'none';
                     
+                    // 保存原始文本
+                    originalText.textContent = data.text;
+                    
+                    // 渲染结果（包含LaTeX公式渲染）
+                    resultText.innerHTML = renderMathInText(data.text);
+                    
                     // 显示结果
-                    resultText.textContent = data.text;
                     resultContainer.style.display = 'block';
                 })
                 .catch(error => {
@@ -191,7 +231,11 @@
 
             // 复制结果按钮
             copyButton.addEventListener('click', function() {
-                const text = resultText.textContent;
+                // 根据当前显示的是哪个文本区域来决定复制哪个内容
+                const text = originalText.style.display === 'none' ? 
+                    originalText.textContent : // 复制原始文本，即使显示的是渲染后的文本
+                    originalText.textContent;  // 复制原始文本
+                
                 navigator.clipboard.writeText(text).then(() => {
                     alert('已复制到剪贴板');
                 }).catch(err => {
@@ -199,6 +243,48 @@
                     alert('复制失败，请手动选择并复制');
                 });
             });
+            
+            // 切换按钮事件
+            renderedButton.addEventListener('click', function() {
+                resultText.style.display = 'block';
+                originalText.style.display = 'none';
+                renderedButton.classList.remove('btn-outline-primary');
+                renderedButton.classList.add('btn-primary');
+                originalButton.classList.remove('btn-primary');
+                originalButton.classList.add('btn-outline-primary');
+            });
+            
+            originalButton.addEventListener('click', function() {
+                resultText.style.display = 'none';
+                originalText.style.display = 'block';
+                originalButton.classList.remove('btn-outline-primary');
+                originalButton.classList.add('btn-primary');
+                renderedButton.classList.remove('btn-primary');
+                renderedButton.classList.add('btn-outline-primary');
+            });
+            
+            // 函数：渲染文本中的LaTeX公式
+            function renderMathInText(text) {
+                // 将文本中的换行符转换为HTML的<br>标签
+                let htmlText = text.replace(/\n/g, '<br>');
+                
+                // 查找所有被$包裹的LaTeX公式
+                const regex = /\$(.*?)\$/g;
+                htmlText = htmlText.replace(regex, function(match, formula) {
+                    try {
+                        // 使用KaTeX渲染公式
+                        return katex.renderToString(formula, {
+                            throwOnError: false,
+                            displayMode: false
+                        });
+                    } catch (error) {
+                        console.error('LaTeX渲染错误:', error);
+                        return match; // 如果渲染失败，返回原始文本
+                    }
+                });
+                
+                return htmlText;
+            }
         });
     </script>
 </body>
